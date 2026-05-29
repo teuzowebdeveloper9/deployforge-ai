@@ -33,6 +33,7 @@ Then open:
 - API: `http://localhost:3001/health`
 - Agent Service: `http://localhost:8001/health`
 - Runner Service: `http://localhost:8082/health`
+- PostgreSQL: `localhost:15432`
 - MinIO Console: `http://localhost:9001`
 - Prometheus: `http://localhost:9090`
 - Grafana: `http://localhost:3002`
@@ -116,7 +117,7 @@ go build ./cmd/runner
 
 DeployForge AI now targets this local-first stack:
 
-- Database: `postgres:alpine`.
+- Database: `postgres:alpine`, exposed on `localhost:15432` to avoid clashing with an existing local PostgreSQL.
 - Object storage: MinIO.
 - Events/jobs: Redis/BullMQ in the MVP; RabbitMQ or NATS can be added later.
 - Secrets: local metadata references now; Vault or SOPS/Sealed Secrets later.

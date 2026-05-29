@@ -21,6 +21,7 @@ The root `docker-compose.yml` is the MVP entrypoint.
 - Runner Service: `http://localhost:8082`
 - MinIO API: `http://localhost:9000`
 - MinIO Console: `http://localhost:9001`
+- PostgreSQL: `localhost:15432`
 - Docker Registry: `localhost:5000`
 - Prometheus: `http://localhost:9090`
 - Loki: `http://localhost:3100`

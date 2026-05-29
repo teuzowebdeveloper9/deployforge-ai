@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: deployforge_dev_password
       POSTGRES_DB: deployforge
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -141,8 +141,8 @@ services:
     container_name: deployforge-agent-service
     environment:
       PORT: "8001"
-      MISTRAL_API_KEY: replace_me
-      MISTRAL_MODEL: mistral-large-latest
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-replace_me}
+      MISTRAL_MODEL: ${MISTRAL_MODEL:-mistral-large-latest}
       LOG_LEVEL: INFO
       OBSERVABILITY_PROVIDER: stdout
     ports:

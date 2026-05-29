@@ -94,7 +94,7 @@ Para `docker compose up --build`, voce nao precisa criar `.env.local`; o `docker
 Esses servicos sobem pelo Compose:
 
 ```txt
-PostgreSQL: localhost:5432
+PostgreSQL: localhost:15432
 Redis/BullMQ: localhost:6379
 MinIO API: localhost:9000
 MinIO Console: localhost:9001
