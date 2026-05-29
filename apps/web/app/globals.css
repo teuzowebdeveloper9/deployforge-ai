@@ -2,67 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: dark;
-  background: #050712;
-  color: #f8fafc;
-}
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
 
-* {
-  box-sizing: border-box;
-}
+  html {
+    @apply min-h-full bg-[#050712];
+  }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: #050712;
-  color: #f8fafc;
-  font-family:
-    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  text-rendering: geometricPrecision;
-}
+  body {
+    @apply m-0 min-h-screen bg-[#050712] font-sans text-slate-50 antialiased;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  a {
+    @apply text-inherit no-underline;
+  }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
+  button,
+  a,
+  input,
+  textarea,
+  select {
+    @apply transition duration-200 ease-out;
+  }
 
-button,
-a,
-input,
-textarea,
-select {
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease,
-    opacity 140ms ease,
-    transform 180ms ease,
-    box-shadow 180ms ease;
-}
-
-::selection {
-  background: rgba(103, 232, 249, 0.28);
-  color: #ffffff;
-}
-
-::-webkit-scrollbar {
-  height: 10px;
-  width: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.32);
-  border-radius: 999px;
+  ::selection {
+    @apply bg-cyan-300/30 text-white;
+  }
 }
