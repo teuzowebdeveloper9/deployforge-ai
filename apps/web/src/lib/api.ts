@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export interface DeployForgeApp {
   id: string;
@@ -43,6 +43,42 @@ export interface EnvVariable {
   isRequired: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface GeneratedFileSummary {
+  path: string;
+  language: string;
+  preview: string;
+}
+
+export interface GenerationTimelineItem {
+  label: string;
+  status: string;
+  provider?: string;
+  count?: number;
+  score?: number;
+}
+
+export interface GenerateAppResponse {
+  app: DeployForgeApp;
+  version: AppVersion;
+  quality: {
+    build: Build;
+    quality: {
+      status: string;
+      qualityScore: number;
+    };
+  };
+  agent: {
+    mode: string;
+    response: string;
+    provider: string;
+    model: string;
+  };
+  files: GeneratedFileSummary[];
+  previewHtml: string;
+  previewUrl: string;
+  timeline: GenerationTimelineItem[];
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {

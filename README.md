@@ -9,8 +9,8 @@ The project intentionally does not implement a skills system in this phase.
 ## Architecture
 
 ```txt
-apps/web            Next.js App Router dashboard
-apps/api            NestJS API, Prisma, PostgreSQL and orchestration
+apps/web            Next.js App Router prompt builder and workspace
+apps/api            NestJS API, Prisma, PostgreSQL, generation and orchestration
 apps/agent-service  FastAPI + Mistral planning/analyze service
 apps/runner-service Go quality-gate runner
 packages/           Shared contracts and stable config helpers
@@ -18,7 +18,7 @@ infra/              Docker, local infrastructure docs and scripts
 docs/               Architecture and operating docs
 ```
 
-The API is the source of truth for metadata. It stores apps, versions, builds, env metadata and audit logs in PostgreSQL. It saves source snapshots and large quality logs/reports in storage. It calls agent-service for Mistral-backed planning and runner-service for quality gates.
+The API is the source of truth for metadata. It stores apps, versions, builds, env metadata and audit logs in PostgreSQL. It saves generated source snapshots, preview HTML and large quality logs/reports in storage. It calls agent-service for Mistral-backed planning and runner-service for quality gates.
 
 ## Run Locally
 
@@ -42,14 +42,13 @@ Docker Compose starts PostgreSQL, Redis, MinIO, a local Docker Registry, API, we
 
 ## MVP Flow
 
-1. Open the web dashboard.
-2. Create an application.
-3. Open the application detail page.
-4. Create a fake/local version snapshot.
-5. View versions.
-6. Start a quality gate from the builds page.
-7. Send a prompt on the agent page.
-8. Review env variable metadata without seeing secret values.
+1. Open the prompt builder at `http://localhost:3000`.
+2. Describe the application you want to create.
+3. DeployForge asks the agent-service for a technical plan.
+4. The API creates the app workspace, generates safe starter files and stores a source snapshot.
+5. Runner-service executes the quality gate for the generated snapshot.
+6. The frontend shows timeline, generated files, quality status and live preview.
+7. Open the app workspace to inspect versions, builds, agent messages and optional env metadata.
 
 ## Useful API Calls
 
@@ -59,6 +58,12 @@ curl -X POST http://localhost:3001/apps \
   -d '{"name":"demo-app","description":"Local MVP app"}'
 
 curl http://localhost:3001/apps
+
+curl -X POST http://localhost:3001/apps/generate \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Create a CRM with customers, pipeline dashboard and notes."}'
+
+curl http://localhost:3001/apps/<appId>/preview
 
 curl -X POST http://localhost:3001/apps/<appId>/versions \
   -H "Content-Type: application/json" \
@@ -152,6 +157,6 @@ CI/CD is a quality guardrail, not the product focus.
 - Implement the MinIO storage adapter and runner artifact download flow.
 - Keep Redis/BullMQ for MVP jobs; add RabbitMQ or NATS only when routing needs justify it.
 - Add Vault or SOPS/Sealed Secrets for real secret retrieval.
-- Add isolated preview sandboxes with Docker-in-Docker or dedicated containers.
+- Replace the static preview MVP with isolated preview sandboxes using Docker-in-Docker or dedicated containers.
 - Add richer OpenAPI/AsyncAPI contracts.
 - Implement a skills system only in a later phase.

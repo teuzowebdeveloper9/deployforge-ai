@@ -6,6 +6,7 @@ import { AgentsController } from "./presentation/controllers/agents.controller";
 
 @Module({
   controllers: [AgentsController],
-  providers: [SendAgentMessageUseCase, AgentServiceClient, PrismaAgentConversationRepository]
+  providers: [SendAgentMessageUseCase, AgentServiceClient, PrismaAgentConversationRepository],
+  exports: [AgentServiceClient]
 })
 export class AgentsModule {}

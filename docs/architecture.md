@@ -4,19 +4,20 @@ DeployForge AI uses a pragmatic microservices monorepo. Each deployable service 
 
 ## Services
 
-- `web`: user interface for apps, versions, builds, agent prompts and env metadata.
-- `api`: orchestration boundary and source of truth for metadata.
+- `web`: prompt-first builder plus workspace screens for apps, versions, builds, agent prompts and env metadata.
+- `api`: generation/orchestration boundary and source of truth for metadata.
 - `agent-service`: Mistral-backed planning and analysis service.
 - `runner-service`: isolated quality gate executor.
 
 ## Core Flow
 
-1. A user creates an app in `web`.
-2. `web` calls `api`.
-3. `api` persists metadata in PostgreSQL and emits domain events through a queue port.
-4. A version snapshot is saved through `StoragePort`.
-5. Quality gates are requested through `api`, executed by `runner-service` and summarized back in PostgreSQL.
-6. Prompts are sent through `api` to `agent-service`, which calls Mistral or returns a safe local fallback.
+1. A user writes an app prompt in `web`.
+2. `web` calls `POST /apps/generate` in `api`.
+3. `api` asks `agent-service` for a technical plan and creates app metadata in PostgreSQL.
+4. `api` generates a safe starter file set, saves a source snapshot through `StoragePort` and emits domain events through `QueuePort`.
+5. `api` asks `runner-service` to run the quality gate for the snapshot and stores logs/reports in storage.
+6. `web` shows the generation timeline, generated file list, quality status and preview HTML.
+7. Existing workspace screens can still create additional snapshots, run builds and send follow-up agent prompts.
 
 ## Boundaries
 
@@ -41,6 +42,7 @@ users/{userId}/apps/{appId}/versions/{versionId}/manifest.json
 users/{userId}/apps/{appId}/versions/{versionId}/checksum.sha256
 users/{userId}/apps/{appId}/builds/{buildId}/logs.txt
 users/{userId}/apps/{appId}/builds/{buildId}/quality-report.json
+users/{userId}/apps/{appId}/preview/index.html
 ```
 
 ## Security

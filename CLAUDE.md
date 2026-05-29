@@ -8,8 +8,8 @@ Build the base platform only. Do not implement a project skills system, do not a
 
 ## Monorepo Responsibilities
 
-- `apps/web`: Next.js dashboard, app management, versions, builds, agent prompts and env metadata UI.
-- `apps/api`: NestJS Core API with Prisma/PostgreSQL, orchestration, storage, queue, secrets, auth and local/open-source-ready ports.
+- `apps/web`: Next.js prompt-first builder plus app workspace, versions, builds, agent prompts and env metadata UI.
+- `apps/api`: NestJS Core API with Prisma/PostgreSQL, app generation, orchestration, storage, queue, secrets, auth and local/open-source-ready ports.
 - `apps/agent-service`: FastAPI service using Mistral for safe planning and analysis. It never edits files directly.
 - `apps/runner-service`: Go service that executes quality gates in a temporary workspace with timeouts and safe logs.
 - `packages/shared-contracts`: event and DTO contracts only.
@@ -25,6 +25,7 @@ Build the base platform only. Do not implement a project skills system, do not a
 - Keep external systems behind explicit ports/providers.
 - Keep shared packages free of business logic.
 - Do not allow the API to execute user code directly.
+- Keep app generation in application use cases; controllers only receive requests and return responses.
 - Runner quality execution must be isolated and timeout-bound.
 - Save large runner logs/reports in storage; save summary status in PostgreSQL.
 

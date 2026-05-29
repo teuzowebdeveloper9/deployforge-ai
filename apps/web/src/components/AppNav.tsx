@@ -11,7 +11,11 @@ export function AppNav({ appId }: { appId: string }) {
   return (
     <nav className="mb-5 flex flex-wrap gap-2 border-b border-line pb-3 text-sm">
       {items.map((item) => (
-        <Link key={item.href} href={item.href} className="rounded-md px-3 py-2 hover:bg-white">
+        <Link
+          key={item.href}
+          href={item.href}
+          className="rounded-md px-3 py-2 font-medium text-muted hover:bg-surface hover:text-ink"
+        >
           {item.label}
         </Link>
       ))}

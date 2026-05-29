@@ -4,6 +4,7 @@ import { AppsModule } from "./modules/apps/apps.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { BuildsModule } from "./modules/builds/builds.module";
 import { EnvsModule } from "./modules/envs/envs.module";
+import { GenerationModule } from "./modules/generation/generation.module";
 import { QualityModule } from "./modules/quality/quality.module";
 import { QueueModule } from "./modules/queue/queue.module";
 import { SecretsModule } from "./modules/secrets/secrets.module";
@@ -26,7 +27,8 @@ import { HealthController } from "./health.controller";
     BuildsModule,
     QualityModule,
     AgentsModule,
-    EnvsModule
+    EnvsModule,
+    GenerationModule
   ],
   controllers: [HealthController]
 })
