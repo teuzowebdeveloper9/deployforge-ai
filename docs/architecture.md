@@ -24,10 +24,10 @@ The API never executes user code. Runner-service owns quality execution. Agent-s
 
 ## Ports And Adapters
 
-- `StoragePort`: local filesystem now, Azure Blob Storage later.
-- `QueuePort`: BullMQ/Redis now, Azure Service Bus later.
-- `SecretsPort`: local references now, Azure Key Vault later.
-- `AuthProvider`: dev auth now, JWT and Microsoft Entra External ID later.
+- `StoragePort`: local filesystem now, MinIO object storage next.
+- `QueuePort`: BullMQ/Redis now, RabbitMQ or NATS later if needed.
+- `SecretsPort`: local references now, Vault or SOPS/Sealed Secrets later.
+- `AuthProvider`: dev auth now, JWT or a self-hosted identity provider later.
 
 ## Data
 
@@ -45,4 +45,4 @@ users/{userId}/apps/{appId}/builds/{buildId}/quality-report.json
 
 ## Security
 
-Secrets are never stored as values in PostgreSQL and never returned to the frontend. Future Azure deployments use Managed Identity, RBAC and least privilege.
+Secrets are never stored as values in PostgreSQL and never returned to the frontend. Runtime credentials for storage, queues, registry and secret providers must be injected outside source control. Future secret management should use Vault or encrypted config with SOPS/Sealed Secrets.

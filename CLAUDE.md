@@ -9,13 +9,13 @@ Build the base platform only. Do not implement a project skills system, do not a
 ## Monorepo Responsibilities
 
 - `apps/web`: Next.js dashboard, app management, versions, builds, agent prompts and env metadata UI.
-- `apps/api`: NestJS Core API with Prisma/PostgreSQL, orchestration, storage, queue, secrets, auth and Azure-ready ports.
+- `apps/api`: NestJS Core API with Prisma/PostgreSQL, orchestration, storage, queue, secrets, auth and local/open-source-ready ports.
 - `apps/agent-service`: FastAPI service using Mistral for safe planning and analysis. It never edits files directly.
 - `apps/runner-service`: Go service that executes quality gates in a temporary workspace with timeouts and safe logs.
 - `packages/shared-contracts`: event and DTO contracts only.
 - `packages/shared-config`: stable configuration helpers only.
-- `infra`: Docker, Azure plans, scripts and future IaC.
-- `docs`: architecture, services, envs, agents, quality and Azure infrastructure.
+- `infra`: Docker, local infrastructure plans and scripts.
+- `docs`: architecture, services, envs, agents, quality and local infrastructure.
 
 ## Architecture Rules
 
@@ -35,11 +35,11 @@ Build the base platform only. Do not implement a project skills system, do not a
 - Never return real secret values to the frontend.
 - Never save real secret values in the database.
 - Never log secret values.
-- Use `secret_reference` metadata for Key Vault or local references.
+- Use `secret_reference` metadata for local, Vault, SOPS or Sealed Secrets references.
 
-## Azure Direction
+## Local/Open-Source Direction
 
-Future deployment targets Azure Container Apps for long-running services and Azure Container Apps Jobs for quality gates. Planned managed services are Azure Database for PostgreSQL Flexible Server, Blob Storage, Service Bus, Key Vault, Container Registry, Application Insights, Azure Monitor and Log Analytics. Use Managed Identity and least-privilege RBAC.
+The MVP targets Docker Compose with `postgres:alpine`, Redis/BullMQ, MinIO, a local Docker Registry, Grafana, Loki and Prometheus. Planned evolutions are RabbitMQ or NATS for events, Vault or SOPS/Sealed Secrets for secret management, Docker-in-Docker or isolated containers for preview sandboxes, and Drone CI or Gitea Actions if a local CI provider is needed.
 
 ## Definition Of Done
 

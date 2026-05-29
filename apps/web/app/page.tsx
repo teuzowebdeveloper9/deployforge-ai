@@ -5,7 +5,7 @@ export default function HomePage() {
     <div className="mx-auto max-w-md rounded-md border border-line bg-white p-6">
       <h1 className="text-2xl font-semibold">Dev login</h1>
       <p className="mt-2 text-sm text-slate-600">
-        MVP authentication uses a fixed development user. Production auth is planned with Microsoft Entra External ID.
+        MVP authentication uses a fixed development user. Production auth can evolve to JWT or a self-hosted identity provider.
       </p>
       <Link
         href="/apps"
