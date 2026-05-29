@@ -1,0 +1,102 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: deployforge-postgres
+    environment:
+      POSTGRES_USER: deployforge
+      POSTGRES_PASSWORD: deployforge_dev_password
+      POSTGRES_DB: deployforge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deployforge -d deployforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: deployforge-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: deployforge-api
+    environment:
+      NODE_ENV: development
+      PORT: "3001"
+      DATABASE_URL: postgresql://deployforge:deployforge_dev_password@postgres:5432/deployforge?schema=public
+      REDIS_URL: redis://redis:6379
+      STORAGE_ROOT: /data/storage
+      RUNNER_SERVICE_URL: http://runner-service:8082
+      AGENT_SERVICE_URL: http://agent-service:8001
+      AUTH_PROVIDER: dev
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "3001:3001"
+    volumes:
+      - storage-data:/data/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      agent-service:
+        condition: service_started
+      runner-service:
+        condition: service_started
+    command: ["sh", "-c", "npx prisma migrate deploy && npm run start:dev"]
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: deployforge-web
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    command: ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
+
+  agent-service:
+    build:
+      context: .
+      dockerfile: apps/agent-service/Dockerfile
+    container_name: deployforge-agent-service
+    environment:
+      PORT: "8001"
+      MISTRAL_API_KEY: replace_me
+      MISTRAL_MODEL: mistral-large-latest
+      LOG_LEVEL: INFO
+    ports:
+      - "8001:8001"
+
+  runner-service:
+    build:
+      context: .
+      dockerfile: apps/runner-service/Dockerfile
+    container_name: deployforge-runner-service
+    environment:
+      PORT: "8082"
+      STORAGE_ROOT: /data/storage
+      QUALITY_TIMEOUT_SECONDS: "120"
+    ports:
+      - "8082:8082"
+    volumes:
+      - storage-data:/data/storage
+
+volumes:
+  postgres-data:
+  storage-data:

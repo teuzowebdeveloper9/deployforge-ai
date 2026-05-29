@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  apps      App[]
+
+  @@map("users")
+}
+
+model App {
+  id            String         @id @default(uuid())
+  userId        String         @map("user_id")
+  name          String
+  description   String?
+  status        String         @default("ACTIVE")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  user          User           @relation(fields: [userId], references: [id])
+  versions      AppVersion[]
+  builds        Build[]
+  envVariables  EnvVariable[]
+  agentMessages AgentMessage[]
+  agentRuns     AgentRun[]
+  auditLogs     AuditLog[]
+
+  @@map("apps")
+}
+
+model AppVersion {
+  id            String   @id @default(uuid())
+  appId         String   @map("app_id")
+  versionNumber Int      @map("version_number")
+  storagePath   String   @map("storage_path")
+  checksum      String
+  status        String   @default("CREATED")
+  qualityScore  Int?     @map("quality_score")
+  createdAt     DateTime @default(now()) @map("created_at")
+  createdBy     String   @map("created_by")
+  app           App      @relation(fields: [appId], references: [id])
+  builds        Build[]
+
+  @@unique([appId, versionNumber])
+  @@map("app_versions")
+}
+
+model Build {
+  id         String      @id @default(uuid())
+  appId      String      @map("app_id")
+  versionId  String?     @map("version_id")
+  status     String
+  type       String
+  logsPath   String?     @map("logs_path")
+  reportPath String?     @map("report_path")
+  startedAt  DateTime?   @map("started_at")
+  finishedAt DateTime?   @map("finished_at")
+  app        App         @relation(fields: [appId], references: [id])
+  version    AppVersion? @relation(fields: [versionId], references: [id])
+  logs       BuildLog[]
+
+  @@map("builds")
+}
+
+model BuildLog {
+  id        String   @id @default(uuid())
+  buildId   String   @map("build_id")
+  level     String
+  message   String
+  createdAt DateTime @default(now()) @map("created_at")
+  build     Build    @relation(fields: [buildId], references: [id])
+
+  @@map("build_logs")
+}
+
+model AgentMessage {
+  id        String   @id @default(uuid())
+  appId     String   @map("app_id")
+  role      String
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  app       App      @relation(fields: [appId], references: [id])
+
+  @@map("agent_messages")
+}
+
+model AgentRun {
+  id         String    @id @default(uuid())
+  appId      String    @map("app_id")
+  status     String
+  prompt     String
+  response   String?
+  startedAt  DateTime  @default(now()) @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  app        App       @relation(fields: [appId], references: [id])
+
+  @@map("agent_runs")
+}
+
+model EnvVariable {
+  id              String   @id @default(uuid())
+  appId           String   @map("app_id")
+  environment     String
+  key             String
+  secretReference String   @map("secret_reference")
+  isRequired      Boolean  @default(false) @map("is_required")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  app             App      @relation(fields: [appId], references: [id])
+
+  @@unique([appId, environment, key])
+  @@map("env_variables")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  appId     String?  @map("app_id")
+  actorId   String   @map("actor_id")
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  app       App?     @relation(fields: [appId], references: [id])
+
+  @@map("audit_logs")
+}

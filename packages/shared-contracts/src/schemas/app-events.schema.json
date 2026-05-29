@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deployforge.ai/schemas/app-events.schema.json",
+  "title": "DeployForge AI Domain Event",
+  "type": "object",
+  "required": ["id", "type", "occurredAt", "correlationId", "payload"],
+  "properties": {
+    "id": { "type": "string" },
+    "type": {
+      "type": "string",
+      "enum": [
+        "APP_CREATED",
+        "APP_VERSION_CREATED",
+        "QUALITY_GATE_REQUESTED",
+        "QUALITY_GATE_COMPLETED",
+        "AGENT_RUN_REQUESTED",
+        "AGENT_RUN_STARTED",
+        "AGENT_RUN_COMPLETED",
+        "PREVIEW_REQUESTED",
+        "PREVIEW_CREATED",
+        "ROLLBACK_REQUESTED"
+      ]
+    },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "correlationId": { "type": "string" },
+    "payload": { "type": "object" }
+  },
+  "additionalProperties": false
+}

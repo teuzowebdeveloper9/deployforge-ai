@@ -1,0 +1,22 @@
+{
+  "name": "deployforge-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-first platform for app creation, versioning, quality gates, previews and governance.",
+  "workspaces": [
+    "apps/web",
+    "apps/api",
+    "packages/shared-contracts",
+    "packages/shared-config"
+  ],
+  "scripts": {
+    "check:no-env": "node infra/scripts/check-no-env.js",
+    "secret-scan": "node infra/scripts/secret-scan.js",
+    "quality": "npm run check:no-env && npm run secret-scan",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  }
+}

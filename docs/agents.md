@@ -1,0 +1,14 @@
+# Agents
+
+DeployForge AI includes an agent-service, not a project skills system in this phase.
+
+The agent-service:
+
+- Receives a user prompt.
+- Builds a base software architecture system prompt.
+- Calls Mistral when configured.
+- Returns a technical plan or analysis.
+- Never edits files directly.
+- Never suggests committing secrets or weakening quality checks.
+
+Future controlled tool execution should happen through API-owned tools or MCP-style orchestration, not direct filesystem writes from the agent-service.
