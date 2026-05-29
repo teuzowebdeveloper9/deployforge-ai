@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { AgentServiceClient } from "../../../agents/infrastructure/providers/agent-service.client";
+import { PrismaAgentConversationRepository } from "../../../agents/infrastructure/providers/prisma-agent-conversation.repository";
 import { AuthenticatedUser } from "../../../auth/application/ports/auth-provider.port";
 import { APPS_REPOSITORY, AppsRepository } from "../../../apps/domain/repositories/apps.repository";
 import { RequestQualityGateUseCase } from "../../../quality/application/use-cases/request-quality-gate.use-case";
@@ -20,20 +21,24 @@ export class GenerateAppUseCase {
     @Inject(STORAGE_PORT) private readonly storage: StoragePort,
     private readonly snapshots: SnapshotService,
     private readonly agent: AgentServiceClient,
+    private readonly conversations: PrismaAgentConversationRepository,
     private readonly files: GeneratedAppFilesService,
     private readonly qualityGate: RequestQualityGateUseCase
   ) {}
 
   async execute(user: AuthenticatedUser, dto: GenerateAppDto) {
-    const plan = await this.agent.plan(this.buildAgentPrompt(dto.prompt));
-    const generated = this.files.create({ prompt: dto.prompt, requestedName: dto.name, plan: plan.response });
+    const agentGeneration = await this.agent.generateApp(dto.prompt);
+    const generated = this.files.create({ prompt: dto.prompt, requestedName: dto.name, generated: agentGeneration });
     const app = await this.apps.create({
       user,
       name: generated.appName,
-      description: dto.prompt.slice(0, 220)
+      description: generated.description.slice(0, 220)
     });
 
     await this.queue.publish({ type: "APP_CREATED", payload: { appId: app.id, userId: user.id } });
+    const run = await this.conversations.startRun(app.id, dto.prompt);
+    await this.conversations.saveMessage(app.id, "user", dto.prompt);
+    await this.conversations.saveMessage(app.id, "assistant", "I’ll start by understanding your product idea and generating the first app version.");
 
     const versionId = randomUUID();
     const versionNumber = await this.versions.nextVersionNumber(app.id);
@@ -61,18 +66,32 @@ export class GenerateAppUseCase {
     });
 
     const quality = await this.qualityGate.execute(app.id, version.id);
+    const agentSummary = [
+      generated.notes || "Application files were generated from the prompt.",
+      "",
+      `Generated ${generated.files.length} files and created snapshot v${version.versionNumber}.`,
+      `Quality gate finished with ${quality.quality.status} (${quality.quality.qualityScore}/100).`,
+      "The preview is ready on the right panel."
+    ].join("\n");
+    await this.conversations.saveMessage(app.id, "assistant", agentSummary);
+    await this.conversations.finishRun(run.id, "COMPLETED", agentSummary);
 
     return {
       app,
       version,
       quality,
-      agent: plan,
+      agent: {
+        mode: "generate-app",
+        response: generated.notes,
+        provider: generated.provider,
+        model: generated.model
+      },
       files: generated.files.map((file) => ({ path: file.path, language: file.language, preview: file.preview })),
       previewHtml: generated.previewHtml,
       previewUrl: `/apps/${app.id}/preview`,
       timeline: [
         { label: "Prompt received", status: "completed" },
-        { label: "Architecture plan generated", status: "completed", provider: plan.provider },
+        { label: "Application code generated", status: "completed", provider: generated.provider },
         { label: "Files generated", status: "completed", count: generated.files.length },
         { label: `Snapshot v${version.versionNumber} created`, status: "completed" },
         { label: `Quality gate ${quality.quality.status}`, status: "completed", score: quality.quality.qualityScore },
@@ -93,15 +112,5 @@ export class GenerateAppUseCase {
 
   private previewPath(userId: string, appId: string) {
     return `users/${userId}/apps/${appId}/preview/index.html`;
-  }
-
-  private buildAgentPrompt(prompt: string) {
-    return [
-      "Plan a small generated application for DeployForge AI.",
-      "Return practical architecture, modules, risks and quality gate notes.",
-      "Do not include secrets. Do not suggest removing tests.",
-      "",
-      `User prompt: ${prompt}`
-    ].join("\n");
   }
 }

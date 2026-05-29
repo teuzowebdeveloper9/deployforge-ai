@@ -1,5 +1,5 @@
-import { BuilderClient } from "@/components/BuilderClient";
+import { HomePrompt } from "@/components/HomePrompt";
 
 export default function HomePage() {
-  return <BuilderClient />;
+  return <HomePrompt />;
 }

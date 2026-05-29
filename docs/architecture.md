@@ -13,8 +13,8 @@ DeployForge AI uses a pragmatic microservices monorepo. Each deployable service 
 
 1. A user writes an app prompt in `web`.
 2. `web` calls `POST /apps/generate` in `api`.
-3. `api` asks `agent-service` for a technical plan and creates app metadata in PostgreSQL.
-4. `api` generates a safe starter file set, saves a source snapshot through `StoragePort` and emits domain events through `QueuePort`.
+3. `api` asks `agent-service` to generate a bounded file set through Mistral and creates app metadata in PostgreSQL.
+4. `api` validates generated paths/content, saves a source snapshot through `StoragePort` and emits domain events through `QueuePort`.
 5. `api` asks `runner-service` to run the quality gate for the snapshot and stores logs/reports in storage.
 6. `web` shows the generation timeline, generated file list, quality status and preview HTML.
 7. Existing workspace screens can still create additional snapshots, run builds and send follow-up agent prompts.

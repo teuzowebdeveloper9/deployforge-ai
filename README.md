@@ -1,24 +1,68 @@
 # DeployForge AI
 
-DeployForge AI is an AI-first platform for creating, versioning, analyzing, previewing and governing applications and microservices.
+DeployForge AI is an AI-first builder workspace for creating, evolving, versioning, validating and previewing applications and microservices.
 
-This MVP provides a local/open-source monorepo with a Next.js frontend, NestJS Core API, FastAPI agent-service, Go runner-service, PostgreSQL, Redis/BullMQ, local filesystem storage, MinIO-ready storage, local Docker Registry and Grafana/Loki/Prometheus observability.
+The product experience is intentionally closer to Lovable, v0, Replit Agent and Cursor than a CRUD dashboard: the user starts with a prompt, enters a project workspace, keeps chatting in the same app context, follows structured agent activity and inspects the live preview beside the conversation.
 
-The project intentionally does not implement a skills system in this phase.
+This phase does not implement a skills system. Skills are a future evolution and must not be added in this MVP.
+
+## What Is Included
+
+- Next.js frontend with an AI-first prompt home, animated drawer sidebar, project chat, agent activity timeline and expandable preview panel.
+- NestJS Core API with Prisma/PostgreSQL, modular domains and orchestration endpoints.
+- FastAPI agent-service with Mistral integration for planning, analysis and generated app file sets.
+- Go runner-service for quality gates and report generation.
+- PostgreSQL, Redis/BullMQ, MinIO-ready storage, local Docker Registry, Prometheus, Loki and Grafana through Docker Compose.
+- GitHub Actions CI with frontend, API, agent-service, runner-service, Docker and safety checks.
+- Documentation for architecture, services, envs, quality, agents and local/open-source infrastructure.
+
+## Monorepo Layout
+
+```txt
+apps/
+  web/             Next.js App Router frontend
+  api/             NestJS Core API, Prisma and orchestration
+  agent-service/   FastAPI service backed by Mistral
+  runner-service/  Go quality-gate runner
+packages/
+  shared-contracts/
+  shared-config/
+infra/
+  docker/          Docker and observability helpers
+  local/           Local-first infra notes
+  scripts/         Safety checks
+docs/              Architecture and operating docs
+```
+
+## Product Flow
+
+1. Open `http://localhost:3000`.
+2. Describe the app you want in the large prompt input.
+3. The frontend creates a project draft and immediately navigates to `/apps/{appId}/agent`.
+4. The first prompt is sent inside the project workspace.
+5. The chat keeps app context between messages.
+6. Agent activity appears as structured steps inside the conversation.
+7. The preview panel stays visible from the start and can be expanded.
+8. When generated preview artifacts exist, `Open` opens the app preview.
+9. Follow-up prompts continue the same project instead of creating a new app.
 
 ## Architecture
 
 ```txt
-apps/web            Next.js App Router prompt builder and workspace
-apps/api            NestJS API, Prisma, PostgreSQL, generation and orchestration
-apps/agent-service  FastAPI + Mistral planning/analyze service
-apps/runner-service Go quality-gate runner
-packages/           Shared contracts and stable config helpers
-infra/              Docker, local infrastructure docs and scripts
-docs/               Architecture and operating docs
+web
+  -> api
+     -> postgres for metadata
+     -> storage for snapshots, logs, reports and preview artifacts
+     -> redis/bullmq for local events/jobs
+     -> agent-service for Mistral planning/generation
+     -> runner-service for quality gates
 ```
 
-The API is the source of truth for metadata. It stores apps, versions, builds, env metadata and audit logs in PostgreSQL. It saves generated source snapshots, preview HTML and large quality logs/reports in storage. It calls agent-service for Mistral-backed planning and runner-service for quality gates.
+The API is the source of truth for metadata. It does not execute user code directly. It coordinates app creation, version snapshots, agent messages, quality gates and preview artifacts.
+
+The runner-service is isolated from the API and is responsible for executing quality commands with timeouts and log capture.
+
+The agent-service does not edit repository files directly. It plans, analyzes and returns structured responses or generated file payloads that the API validates before storing.
 
 ## Run Locally
 
@@ -29,54 +73,112 @@ docker compose up --build
 
 Then open:
 
-- Web: `http://localhost:3000`
-- API: `http://localhost:3001/health`
-- Agent Service: `http://localhost:8001/health`
-- Runner Service: `http://localhost:8082/health`
-- PostgreSQL: `localhost:15432`
-- MinIO Console: `http://localhost:9001`
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3002`
+| Service | URL |
+| --- | --- |
+| Web | `http://localhost:3000` |
+| API health | `http://localhost:3001/health` |
+| Agent Service health | `http://localhost:8001/health` |
+| Runner Service health | `http://localhost:8082/health` |
+| PostgreSQL | `localhost:15432` |
+| MinIO Console | `http://localhost:9001` |
+| Local Registry | `localhost:5000` |
+| Prometheus | `http://localhost:9090` |
+| Grafana | `http://localhost:3002` |
 
-Docker Compose starts PostgreSQL, Redis, MinIO, a local Docker Registry, API, web, agent-service, runner-service, Prometheus, Loki and Grafana. The API runs Prisma migrations on startup.
+Docker Compose starts PostgreSQL, Redis, MinIO, local Docker Registry, API, web, agent-service, runner-service, Prometheus, Loki and Grafana. The API applies Prisma migrations on startup.
 
-## MVP Flow
+## Environment Files
 
-1. Open the prompt builder at `http://localhost:3000`.
-2. Describe the application you want to create.
-3. DeployForge asks the agent-service for a technical plan.
-4. The API creates the app workspace, generates safe starter files and stores a source snapshot.
-5. Runner-service executes the quality gate for the generated snapshot.
-6. The frontend shows timeline, generated files, quality status and live preview.
-7. Open the app workspace to inspect versions, builds, agent messages and optional env metadata.
+Do not create or commit real `.env` files.
 
-## Useful API Calls
+Only use these templates as references:
+
+```txt
+apps/web/.env.example
+apps/api/.env.example
+apps/agent-service/.env.example
+apps/runner-service/.env.example
+```
+
+The only external provider key normally needed for local AI generation is:
+
+```txt
+apps/agent-service/.env.example
+MISTRAL_API_KEY="replace_me"
+MISTRAL_MODEL="mistral-large-latest"
+```
+
+For Docker Compose, provide `MISTRAL_API_KEY` through your shell or local runtime environment before starting the stack. Never commit the real value.
+
+More detail:
+
+- `docs/envs.md`
+- `docs/local-env-files.md`
+
+## Security Rules
+
+- Never create real `.env`, `.env.local`, `.env.production` or `.env.*` files in the repository.
+- Never commit secrets.
+- Never store secret values in PostgreSQL.
+- Store only env metadata and `secret_reference`.
+- Never log secrets.
+- Never hardcode cloud or registry credentials.
+- Never remove lint, typecheck or tests just to pass CI.
+- Never place business rules in controllers or routers.
+- Never add a skills system in this phase.
+
+## API Examples
+
+Create a draft app:
 
 ```bash
 curl -X POST http://localhost:3001/apps \
   -H "Content-Type: application/json" \
   -d '{"name":"demo-app","description":"Local MVP app"}'
+```
 
+List apps:
+
+```bash
 curl http://localhost:3001/apps
+```
 
+Generate a full app with Mistral-backed files, snapshot, quality gate and preview:
+
+```bash
 curl -X POST http://localhost:3001/apps/generate \
   -H "Content-Type: application/json" \
   -d '{"prompt":"Create a CRM with customers, pipeline dashboard and notes."}'
-
-curl http://localhost:3001/apps/<appId>/preview
-
-curl -X POST http://localhost:3001/apps/<appId>/versions \
-  -H "Content-Type: application/json" \
-  -d '{"createdBy":"dev-user"}'
-
-curl -X POST http://localhost:3001/apps/<appId>/versions/<versionId>/quality-gate
-
-curl -X POST http://localhost:3001/apps/<appId>/agent/messages \
-  -H "Content-Type: application/json" \
-  -d '{"message":"Planeje uma API para billing multi-tenant"}'
 ```
 
-## Service Commands
+Continue an existing project chat:
+
+```bash
+curl -X POST http://localhost:3001/apps/<appId>/messages \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Improve this app with a billing dashboard and explain the quality gates."}'
+```
+
+Read messages and agent steps:
+
+```bash
+curl http://localhost:3001/apps/<appId>/messages
+curl http://localhost:3001/apps/<appId>/steps
+```
+
+Open preview HTML:
+
+```bash
+curl http://localhost:3001/apps/<appId>/preview
+```
+
+Run quality gate for a version:
+
+```bash
+curl -X POST http://localhost:3001/apps/<appId>/versions/<versionId>/quality-gate
+```
+
+## Development Commands
 
 Frontend:
 
@@ -118,45 +220,88 @@ go vet ./...
 go build ./cmd/runner
 ```
 
-## Local/Open-Source Infrastructure Plan
+Root safety checks:
 
-DeployForge AI now targets this local-first stack:
+```bash
+npm run check:no-env
+npm run secret-scan
+npm run quality
+```
 
-- Database: `postgres:alpine`, exposed on `localhost:15432` to avoid clashing with an existing local PostgreSQL.
-- Object storage: MinIO.
-- Events/jobs: Redis/BullMQ in the MVP; RabbitMQ or NATS can be added later.
-- Secrets: local metadata references now; Vault or SOPS/Sealed Secrets later.
-- Registry: local Docker Registry on `localhost:5000`.
-- Compute: Docker Compose in the MVP.
-- Async jobs: `runner-service` / worker container.
-- Preview sandbox: Docker-in-Docker or isolated containers later.
-- Observability: Grafana, Loki and Prometheus.
-- CI/CD: GitHub Actions now; Drone CI or Gitea Actions later.
-- Boards/issues: GitHub Issues, Gitea Issues or Plane.
-- Git hosting: GitHub now; Gitea local later.
+## Local Infrastructure Direction
 
-See `docs/local-infra.md` and `infra/local/architecture.md`.
+DeployForge AI currently targets a local-first/open-source stack:
 
-## Env And Secrets
+| Cloud concern | MVP replacement |
+| --- | --- |
+| Azure Database for PostgreSQL | `postgres:16-alpine` |
+| Azure Blob Storage | MinIO-ready storage/local storage |
+| Azure Service Bus | Redis/BullMQ |
+| Azure Key Vault | local secret references now, Vault or SOPS later |
+| Azure Container Registry | local Docker Registry |
+| Azure Container Apps | Docker Compose |
+| Azure Container Apps Jobs | runner-service / worker container |
+| Dynamic Sessions / sandbox | isolated containers later |
+| Application Insights | Grafana, Loki, Prometheus |
+| Azure Pipelines | GitHub Actions |
 
-Never create real `.env` files in the repository. Use only `.env.example` files and environment variables injected by Docker Compose or your runtime.
+See:
 
-The application never stores real secret values in PostgreSQL. It stores metadata and a `secret_reference` that can point to local references now and Vault/SOPS-managed secrets later.
+- `docs/local-infra.md`
+- `infra/local/architecture.md`
+- `infra/docker/README.md`
 
-Exact local env paths and models are documented in `docs/local-env-files.md`.
+## Quality Gates
 
-## Quality Protection
+The runner-service is prepared to run stack-aware quality checks:
 
-The GitHub Actions workflow validates frontend, API, agent-service, runner-service, Docker builds where practical, absence of real env files and a basic secret scan.
+- JavaScript/TypeScript: install, lint, typecheck, tests and build.
+- Python: install requirements, `ruff check .` and `pytest`.
+- Go: `go test ./...`, `go vet ./...` and `go build ./...`.
 
-CI/CD is a quality guardrail, not the product focus.
+The runner blocks unsafe workspace access patterns, applies timeouts and produces quality reports for API/storage integration.
+
+## CI
+
+GitHub Actions validates:
+
+- Frontend install, lint, typecheck and build.
+- API install, lint, typecheck, tests and build.
+- Agent-service `ruff check` and `pytest`.
+- Runner-service `go test`, `go vet` and `go build`.
+- Absence of real env files.
+- Basic secret scan.
+- Docker builds where practical.
+
+CI/CD is a quality protection layer, not the product focus.
+
+## Documentation
+
+- `docs/architecture.md`
+- `docs/services.md`
+- `docs/envs.md`
+- `docs/local-env-files.md`
+- `docs/quality.md`
+- `docs/agents.md`
+- `docs/local-infra.md`
+- `AGENTS.md`
+- `CLAUDE.md`
+
+## Current Limitations
+
+- The first generated preview is intentionally simple and static.
+- Preview sandboxing is documented but not fully implemented.
+- Auth is still dev-oriented.
+- Redis/BullMQ is the MVP queue.
+- Secrets are stored as metadata references only.
+- No skills system exists in this phase.
 
 ## Next Steps
 
-- Add real auth with JWT first, then a self-hosted identity option if needed.
-- Implement the MinIO storage adapter and runner artifact download flow.
-- Keep Redis/BullMQ for MVP jobs; add RabbitMQ or NATS only when routing needs justify it.
-- Add Vault or SOPS/Sealed Secrets for real secret retrieval.
-- Replace the static preview MVP with isolated preview sandboxes using Docker-in-Docker or dedicated containers.
+- Add a real streaming transport for agent status updates.
+- Expand preview sandbox isolation.
+- Implement MinIO adapter usage end to end for generated artifacts.
 - Add richer OpenAPI/AsyncAPI contracts.
-- Implement a skills system only in a later phase.
+- Add JWT auth, then a self-hosted identity option if needed.
+- Introduce Vault or SOPS/Sealed Secrets for real secret retrieval.
+- Implement skills only in a later, explicitly requested phase.

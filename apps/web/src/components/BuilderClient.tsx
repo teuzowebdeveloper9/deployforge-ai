@@ -16,6 +16,7 @@ export function BuilderClient() {
   const [result, setResult] = useState<GenerateAppResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const isFallbackAgent = result ? result.agent.provider !== "mistral" : false;
 
   const previewUrl = useMemo(() => {
     if (!result?.previewUrl) return "";
@@ -84,7 +85,7 @@ export function BuilderClient() {
 
           {loading ? (
             <div className="space-y-3">
-              {["Planning with Mistral", "Generating files", "Creating snapshot", "Running quality gate", "Preparing preview"].map(
+              {["Planning with agent-service", "Generating files", "Creating snapshot", "Running quality gate", "Preparing preview"].map(
                 (item) => (
                   <div key={item} className="rounded-md border border-line bg-panel px-3 py-3 text-sm text-muted">
                     {item}...
@@ -96,11 +97,22 @@ export function BuilderClient() {
 
           {result ? (
             <div className="space-y-4">
+              {isFallbackAgent ? (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  <div className="font-semibold">Mistral is not connected in this container.</div>
+                  <p className="mt-1 leading-5">
+                    The app was generated with the local fallback. Set `MISTRAL_API_KEY` in the shell that starts Docker Compose and recreate `agent-service`.
+                  </p>
+                </div>
+              ) : null}
+
               <div className="rounded-md border border-line bg-panel p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="font-semibold text-ink">{result.app.name}</h2>
-                    <p className="mt-1 text-xs text-muted">v{result.version.versionNumber} generated and checked</p>
+                    <p className="mt-1 text-xs text-muted">
+                      v{result.version.versionNumber} generated and checked · agent: {result.agent.provider}
+                    </p>
                   </div>
                   <StatusBadge status={result.quality.quality.status} />
                 </div>
@@ -133,6 +145,13 @@ export function BuilderClient() {
                     </div>
                   ))}
                 </div>
+              </details>
+
+              <details className="rounded-md border border-line bg-white p-3">
+                <summary className="cursor-pointer text-sm font-semibold text-ink">Agent plan</summary>
+                <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-panel p-3 text-xs leading-5 text-muted">
+                  {result.agent.response}
+                </pre>
               </details>
             </div>
           ) : null}
