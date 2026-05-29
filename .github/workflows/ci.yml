@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - development
+  push:
+    branches:
+      - main
+
+jobs:
+  repository-guards:
+    name: Repository guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: node infra/scripts/check-no-env.js
+      - run: node infra/scripts/secret-scan.js
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+  api:
+    name: Core API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  agent-service:
+    name: Agent Service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/agent-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: pytest
+
+  runner-service:
+    name: Runner Service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/runner-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - run: go test ./...
+      - run: go vet ./...
+      - run: go build ./cmd/runner
+
+  docker-build:
+    name: Docker builds
+    runs-on: ubuntu-latest
+    needs:
+      - repository-guards
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f apps/web/Dockerfile -t deployforge-web:ci .
+      - run: docker build -f apps/api/Dockerfile -t deployforge-api:ci .
+      - run: docker build -f apps/agent-service/Dockerfile -t deployforge-agent-service:ci .
+      - run: docker build -f apps/runner-service/Dockerfile -t deployforge-runner-service:ci .
