@@ -5,10 +5,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#17212b",
-        line: "#d8dee7",
-        panel: "#f8fafc",
-        accent: "#0f766e"
+        ink: "#f8fafc",
+        muted: "#94a3b8",
+        line: "rgba(255,255,255,0.10)",
+        panel: "rgba(255,255,255,0.055)",
+        surface: "rgba(8,11,23,0.72)",
+        accent: "#67e8f9",
+        accentDark: "#38bdf8"
       }
     }
   },

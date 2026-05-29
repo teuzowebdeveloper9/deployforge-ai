@@ -47,17 +47,17 @@ export function BuildsClient({ appId }: { appId: string }) {
   }
 
   return (
-    <section className="rounded-md border border-line bg-white p-5">
+    <section className="rounded-lg border border-line bg-surface p-5 shadow-sm">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">Builds and quality gates</h1>
-          <p className="mt-1 text-sm text-slate-600">Quality gates are executed by runner-service, not by the API.</p>
+          <h1 className="text-xl font-semibold text-ink">Quality gates</h1>
+          <p className="mt-1 text-sm text-muted">Run checks through runner-service and keep the API as orchestration only.</p>
         </div>
         <div className="flex gap-2">
           <select
             value={selectedVersion}
             onChange={(event) => setSelectedVersion(event.target.value)}
-            className="rounded-md border border-line px-3 py-2 text-sm"
+            className="rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-accent"
           >
             {versions.map((version) => (
               <option key={version.id} value={version.id}>
@@ -68,7 +68,7 @@ export function BuildsClient({ appId }: { appId: string }) {
           <button
             onClick={runQualityGate}
             disabled={!selectedVersion || running}
-            className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-60"
+            className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accentDark disabled:opacity-60"
           >
             {running ? "Running..." : "Run quality gate"}
           </button>
@@ -76,7 +76,7 @@ export function BuildsClient({ appId }: { appId: string }) {
       </div>
       {error ? <p className="mb-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</p> : null}
       <div className="overflow-hidden rounded-md border border-line">
-        <div className="grid grid-cols-[1fr_140px_140px_1.2fr] gap-3 bg-panel px-3 py-2 text-sm font-medium">
+        <div className="grid grid-cols-[1fr_140px_140px_1.2fr] gap-3 bg-panel px-3 py-2 text-sm font-semibold text-ink">
           <span>Build</span>
           <span>Status</span>
           <span>Type</span>
@@ -89,10 +89,14 @@ export function BuildsClient({ appId }: { appId: string }) {
               <StatusBadge status={build.status} />
             </span>
             <span>{build.type}</span>
-            <span className="truncate text-slate-600">{build.reportPath ?? "-"}</span>
+            <span className="truncate text-muted">{build.reportPath ?? "-"}</span>
           </div>
         ))}
-        {builds.length === 0 ? <p className="px-3 py-6 text-sm text-slate-600">No builds yet.</p> : null}
+        {builds.length === 0 ? (
+          <div className="bg-panel px-4 py-8 text-sm text-muted">
+            No gates have run yet. Create a snapshot, then run the quality gate.
+          </div>
+        ) : null}
       </div>
     </section>
   );

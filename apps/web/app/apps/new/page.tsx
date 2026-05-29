@@ -2,10 +2,12 @@ import { CreateAppForm } from "@/components/CreateAppForm";
 
 export default function NewAppPage() {
   return (
-    <div>
+    <div className="space-y-5">
       <div className="mb-5">
-        <h1 className="text-2xl font-semibold">Create application</h1>
-        <p className="mt-1 text-sm text-slate-600">The MVP uses dev auth and creates metadata through the Core API.</p>
+        <h1 className="text-3xl font-semibold text-ink">New application</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+          Create the workspace first. The app can be versioned and checked before any runtime variables are configured.
+        </p>
       </div>
       <CreateAppForm />
     </div>

@@ -1,11 +1,5 @@
-import { AgentClient } from "@/components/AgentClient";
-import { AppNav } from "@/components/AppNav";
+import { ProjectWorkspace } from "@/components/ProjectWorkspace";
 
 export default function AgentPage({ params }: { params: { appId: string } }) {
-  return (
-    <div>
-      <AppNav appId={params.appId} />
-      <AgentClient appId={params.appId} />
-    </div>
-  );
+  return <ProjectWorkspace appId={params.appId} />;
 }

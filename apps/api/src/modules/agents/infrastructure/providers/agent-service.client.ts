@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { loadConfig } from "../../../../shared/config/app.config";
 import { redactSecrets } from "../../../../shared/logger/safe-log";
 
@@ -7,6 +7,23 @@ export interface AgentPlanResponse {
   response: string;
   provider: string;
   model: string;
+}
+
+export interface AgentGeneratedFile {
+  path: string;
+  content: string;
+  language: string;
+  purpose: string;
+}
+
+export interface AgentGeneratedAppResponse {
+  mode: string;
+  provider: string;
+  model: string;
+  app_name: string;
+  description: string;
+  notes: string;
+  files: AgentGeneratedFile[];
 }
 
 @Injectable()
@@ -32,5 +49,21 @@ export class AgentServiceClient {
     }
 
     return (await response.json()) as AgentPlanResponse;
+  }
+
+  async generateApp(prompt: string): Promise<AgentGeneratedAppResponse> {
+    const response = await fetch(`${this.baseUrl}/agent/generate-app`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+      signal: AbortSignal.timeout(180_000)
+    });
+
+    if (!response.ok) {
+      const text = redactSecrets(await response.text());
+      throw new ServiceUnavailableException(`agent-service generation failed: ${response.status} ${text}`);
+    }
+
+    return (await response.json()) as AgentGeneratedAppResponse;
   }
 }

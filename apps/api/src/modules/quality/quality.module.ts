@@ -10,6 +10,7 @@ import { QualityController } from "./presentation/controllers/quality.controller
 @Module({
   imports: [VersionsModule, BuildsModule, StorageModule, QueueModule],
   controllers: [QualityController],
-  providers: [RequestQualityGateUseCase, RunnerClient]
+  providers: [RequestQualityGateUseCase, RunnerClient],
+  exports: [RequestQualityGateUseCase]
 })
 export class QualityModule {}

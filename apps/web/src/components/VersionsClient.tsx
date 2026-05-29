@@ -34,23 +34,23 @@ export function VersionsClient({ appId }: { appId: string }) {
   }
 
   return (
-    <section className="rounded-md border border-line bg-white p-5">
+    <section className="rounded-lg border border-line bg-surface p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">Versions</h1>
-          <p className="mt-1 text-sm text-slate-600">Snapshots are stored by metadata, manifest, checksum and archive path.</p>
+          <h1 className="text-xl font-semibold text-ink">Snapshots</h1>
+          <p className="mt-1 text-sm text-muted">Create a version before running gates or rollback workflows.</p>
         </div>
         <button
           onClick={createVersion}
           disabled={saving}
-          className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-60"
+          className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accentDark disabled:opacity-60"
         >
           {saving ? "Creating..." : "Create snapshot"}
         </button>
       </div>
       {error ? <p className="mb-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</p> : null}
       <div className="overflow-hidden rounded-md border border-line">
-        <div className="grid grid-cols-[90px_120px_100px_1fr] gap-3 bg-panel px-3 py-2 text-sm font-medium">
+        <div className="grid grid-cols-[90px_120px_100px_1fr] gap-3 bg-panel px-3 py-2 text-sm font-semibold text-ink">
           <span>Version</span>
           <span>Status</span>
           <span>Score</span>
@@ -63,10 +63,14 @@ export function VersionsClient({ appId }: { appId: string }) {
               <StatusBadge status={version.status} />
             </span>
             <span>{version.qualityScore ?? "-"}</span>
-            <span className="truncate text-slate-600">{version.checksum}</span>
+            <span className="truncate text-muted">{version.checksum}</span>
           </div>
         ))}
-        {versions.length === 0 ? <p className="px-3 py-6 text-sm text-slate-600">No versions yet.</p> : null}
+        {versions.length === 0 ? (
+          <div className="bg-panel px-4 py-8 text-sm text-muted">
+            No snapshots yet. Click create snapshot to start the version history.
+          </div>
+        ) : null}
       </div>
     </section>
   );

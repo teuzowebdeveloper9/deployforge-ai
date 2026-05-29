@@ -7,8 +7,8 @@ Project laws for AI coding agents working on DeployForge AI.
 DeployForge AI is a monorepo for an AI-first platform that creates, versions, analyzes, previews and governs applications and microservices.
 
 ```txt
-apps/web              Next.js user interface
-apps/api              NestJS orchestration API and source of truth
+apps/web              Next.js prompt builder and workspace UI
+apps/api              NestJS generation/orchestration API and source of truth
 apps/agent-service    FastAPI service that talks to Mistral
 apps/runner-service   Go service for isolated quality gates
 packages/shared-*     Contracts and stable shared configuration only
@@ -22,9 +22,9 @@ No `.skills` directory or skills runtime belongs in this phase.
 
 ## Service Boundaries
 
-- Web renders dashboards and sends user actions to the API.
-- API owns users, apps, versions, builds, env metadata, audit logs and orchestration.
-- Agent Service receives prompts, builds a safe system prompt and returns structured Mistral-backed analysis. It never edits files.
+- Web starts with a prompt-first app builder and then exposes workspace screens.
+- API owns users, apps, versions, builds, env metadata, audit logs, generated snapshots and orchestration.
+- Agent Service receives prompts, builds safe system prompts and returns structured Mistral-backed analysis or generated file payloads. It never edits the repository directly.
 - Runner Service receives quality gate jobs, runs checks inside a temporary workspace and returns logs/report data.
 - Shared packages hold contracts, schemas and stable helpers only. They must not contain product business rules.
 
@@ -36,6 +36,8 @@ No `.skills` directory or skills runtime belongs in this phase.
 - Database access is limited to infrastructure persistence adapters.
 - External providers live behind explicit ports or provider classes.
 - The API must never execute user code directly; quality execution belongs to runner-service.
+- Generated app creation belongs in the API generation use case; controllers must stay transport-only.
+- Generated file payloads from the agent-service must be validated before snapshotting.
 
 ## Env And Secrets
 

@@ -1,6 +1,8 @@
 FROM node:20-alpine
 WORKDIR /repo
 
+RUN apk add --no-cache openssl
+
 COPY apps/api/package.json apps/api/package.json
 COPY apps/api/tsconfig.json apps/api/tsconfig.json
 COPY apps/api/tsconfig.build.json apps/api/tsconfig.build.json
