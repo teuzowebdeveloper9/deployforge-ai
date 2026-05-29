@@ -27,6 +27,59 @@ services:
       timeout: 5s
       retries: 20
 
+  minio:
+    image: minio/minio:latest
+    container_name: deployforge-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+
+  registry:
+    image: registry:2
+    container_name: deployforge-registry
+    ports:
+      - "5000:5000"
+    volumes:
+      - registry-data:/var/lib/registry
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: deployforge-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/docker/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: deployforge-loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/docker/observability/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: deployforge-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    ports:
+      - "3002:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+
   api:
     build:
       context: .
@@ -37,7 +90,16 @@ services:
       PORT: "3001"
       DATABASE_URL: postgresql://deployforge:deployforge_dev_password@postgres:5432/deployforge?schema=public
       REDIS_URL: redis://redis:6379
+      QUEUE_PROVIDER: bullmq
+      STORAGE_PROVIDER: local
       STORAGE_ROOT: /data/storage
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_BUCKET: deployforge
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      SECRETS_PROVIDER: local
+      VAULT_ADDR: http://vault:8200
+      OBSERVABILITY_PROVIDER: stdout
       RUNNER_SERVICE_URL: http://runner-service:8082
       AGENT_SERVICE_URL: http://agent-service:8001
       AUTH_PROVIDER: dev
@@ -51,6 +113,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_started
       agent-service:
         condition: service_started
       runner-service:
@@ -80,6 +144,7 @@ services:
       MISTRAL_API_KEY: replace_me
       MISTRAL_MODEL: mistral-large-latest
       LOG_LEVEL: INFO
+      OBSERVABILITY_PROVIDER: stdout
     ports:
       - "8001:8001"
 
@@ -92,6 +157,8 @@ services:
       PORT: "8082"
       STORAGE_ROOT: /data/storage
       QUALITY_TIMEOUT_SECONDS: "120"
+      SANDBOX_PROVIDER: local-workspace
+      OBSERVABILITY_PROVIDER: stdout
     ports:
       - "8082:8082"
     volumes:
@@ -100,3 +167,7 @@ services:
 volumes:
   postgres-data:
   storage-data:
+  minio-data:
+  registry-data:
+  loki-data:
+  grafana-data:

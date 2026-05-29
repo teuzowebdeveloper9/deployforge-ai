@@ -2,7 +2,7 @@
 
 DeployForge AI is an AI-first platform for creating, versioning, analyzing, previewing and governing applications and microservices.
 
-This MVP provides a local monorepo with a Next.js frontend, NestJS Core API, FastAPI agent-service, Go runner-service, PostgreSQL, Redis/BullMQ-ready queue abstractions, local storage and Azure-ready infrastructure documentation.
+This MVP provides a local/open-source monorepo with a Next.js frontend, NestJS Core API, FastAPI agent-service, Go runner-service, PostgreSQL, Redis/BullMQ, local filesystem storage, MinIO-ready storage, local Docker Registry and Grafana/Loki/Prometheus observability.
 
 The project intentionally does not implement a skills system in this phase.
 
@@ -14,7 +14,7 @@ apps/api            NestJS API, Prisma, PostgreSQL and orchestration
 apps/agent-service  FastAPI + Mistral planning/analyze service
 apps/runner-service Go quality-gate runner
 packages/           Shared contracts and stable config helpers
-infra/              Docker, scripts and Azure planning
+infra/              Docker, local infrastructure docs and scripts
 docs/               Architecture and operating docs
 ```
 
@@ -33,8 +33,11 @@ Then open:
 - API: `http://localhost:3001/health`
 - Agent Service: `http://localhost:8001/health`
 - Runner Service: `http://localhost:8082/health`
+- MinIO Console: `http://localhost:9001`
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3002`
 
-Docker Compose starts PostgreSQL, Redis, API, web, agent-service and runner-service. The API runs Prisma migrations on startup.
+Docker Compose starts PostgreSQL, Redis, MinIO, a local Docker Registry, API, web, agent-service, runner-service, Prometheus, Loki and Grafana. The API runs Prisma migrations on startup.
 
 ## MVP Flow
 
@@ -109,27 +112,32 @@ go vet ./...
 go build ./cmd/runner
 ```
 
-## Azure Plan
+## Local/Open-Source Infrastructure Plan
 
-The planned Azure deployment uses:
+DeployForge AI now targets this local-first stack:
 
-- Azure Container Apps for web, API, agent-service and runner-service.
-- Azure Container Apps Jobs for asynchronous quality gates.
-- Azure Blob Storage for snapshots, manifests, checksums, logs and reports.
-- Azure Service Bus for domain events.
-- Azure Key Vault for secret values.
-- Azure Database for PostgreSQL Flexible Server for metadata.
-- Azure Container Registry for service images.
-- Azure Application Insights, Azure Monitor and Log Analytics for observability.
-- Microsoft Entra External ID for future auth.
+- Database: `postgres:alpine`.
+- Object storage: MinIO.
+- Events/jobs: Redis/BullMQ in the MVP; RabbitMQ or NATS can be added later.
+- Secrets: local metadata references now; Vault or SOPS/Sealed Secrets later.
+- Registry: local Docker Registry on `localhost:5000`.
+- Compute: Docker Compose in the MVP.
+- Async jobs: `runner-service` / worker container.
+- Preview sandbox: Docker-in-Docker or isolated containers later.
+- Observability: Grafana, Loki and Prometheus.
+- CI/CD: GitHub Actions now; Drone CI or Gitea Actions later.
+- Boards/issues: GitHub Issues, Gitea Issues or Plane.
+- Git hosting: GitHub now; Gitea local later.
 
-See `docs/azure-infra.md` and `infra/azure/architecture.md`.
+See `docs/local-infra.md` and `infra/local/architecture.md`.
 
 ## Env And Secrets
 
-Never create real `.env` files. Use only `.env.example` files and environment variables injected by Docker Compose or the target platform.
+Never create real `.env` files in the repository. Use only `.env.example` files and environment variables injected by Docker Compose or your runtime.
 
-The application never stores real secret values in PostgreSQL. It stores metadata and a `secret_reference` that can point to local development storage or Azure Key Vault.
+The application never stores real secret values in PostgreSQL. It stores metadata and a `secret_reference` that can point to local references now and Vault/SOPS-managed secrets later.
+
+Exact local env paths and models are documented in `docs/local-env-files.md`.
 
 ## Quality Protection
 
@@ -139,9 +147,10 @@ CI/CD is a quality guardrail, not the product focus.
 
 ## Next Steps
 
-- Add real auth with Microsoft Entra External ID.
-- Replace local adapters with Azure Blob Storage, Service Bus and Key Vault implementations.
-- Move quality gates to Azure Container Apps Jobs.
-- Add preview sandboxes with Azure Container Apps Dynamic Sessions.
+- Add real auth with JWT first, then a self-hosted identity option if needed.
+- Implement the MinIO storage adapter and runner artifact download flow.
+- Keep Redis/BullMQ for MVP jobs; add RabbitMQ or NATS only when routing needs justify it.
+- Add Vault or SOPS/Sealed Secrets for real secret retrieval.
+- Add isolated preview sandboxes with Docker-in-Docker or dedicated containers.
 - Add richer OpenAPI/AsyncAPI contracts.
 - Implement a skills system only in a later phase.

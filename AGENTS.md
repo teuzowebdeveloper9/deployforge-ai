@@ -12,11 +12,11 @@ apps/api              NestJS orchestration API and source of truth
 apps/agent-service    FastAPI service that talks to Mistral
 apps/runner-service   Go service for isolated quality gates
 packages/shared-*     Contracts and stable shared configuration only
-infra/                Docker, Azure planning and operational scripts
+infra/                Docker, local infrastructure and operational scripts
 docs/                 Architecture and operating documentation
 ```
 
-The system is intentionally prepared for Azure Container Apps, Azure Service Bus, Azure Blob Storage, Azure Key Vault, Azure Database for PostgreSQL Flexible Server, Azure Container Registry, Azure Application Insights, Azure Monitor and Log Analytics.
+The system is intentionally local/open-source first: Docker Compose, `postgres:alpine`, Redis/BullMQ, MinIO, local Docker Registry, Grafana, Loki and Prometheus. Vault or SOPS/Sealed Secrets are the planned path for stronger secret management.
 
 No `.skills` directory or skills runtime belongs in this phase.
 
@@ -45,7 +45,7 @@ No `.skills` directory or skills runtime belongs in this phase.
 - Never save real secret values in PostgreSQL.
 - Never log secrets, tokens, API keys, passwords, authorization headers or sensitive payloads.
 - Env metadata may store `key`, `environment`, `secret_reference`, `is_required` and timestamps only.
-- Azure credentials must use Managed Identity and RBAC in future deployments, not hardcoded credentials.
+- Runtime credentials for storage, queues, registry or secret providers must be injected outside source control.
 
 ## Quality Rules
 
@@ -85,7 +85,7 @@ No `.skills` directory or skills runtime belongs in this phase.
 - Never create circular dependencies.
 - Never create a microservice without clear responsibility.
 - Never create shared packages with business rules.
-- Never use hardcoded Azure credentials.
+- Never use hardcoded infrastructure credentials.
 - Do not implement the skills system in this phase.
 - Always update documentation if architecture changes.
 
