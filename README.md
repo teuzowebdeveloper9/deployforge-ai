@@ -284,6 +284,7 @@ CI/CD is a quality protection layer, not the product focus.
 - `docs/quality.md`
 - `docs/agents.md`
 - `docs/local-infra.md`
+- `docs/branch-impact-summary.md`
 - `AGENTS.md`
 - `CLAUDE.md`
 
