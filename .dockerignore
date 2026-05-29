@@ -6,7 +6,7 @@ build
 __pycache__
 *.pyc
 coverage
-storage
+/storage
 .env
 .env.*
 !.env.example
