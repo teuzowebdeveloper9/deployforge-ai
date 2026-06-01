@@ -118,6 +118,7 @@ Gemini tries `GEMINI_MODEL` first and then `GEMINI_FALLBACK_MODELS` so quota fai
 
 More detail:
 
+- `docs/ai-provider-routing.md`
 - `docs/envs.md`
 - `docs/local-env-files.md`
 
