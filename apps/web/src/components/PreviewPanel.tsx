@@ -13,6 +13,8 @@ export function PreviewPanel({ preview, onRefresh }: { preview: PreviewState; on
         <iframe
           title={expandedView ? "Expanded generated app preview" : "Generated app preview"}
           src={preview.url}
+          sandbox="allow-scripts allow-same-origin"
+          referrerPolicy="no-referrer"
           className={`${expandedView ? "h-full rounded-none border-0" : "h-full min-h-[calc(100vh-236px)] rounded-[22px] border border-white/10 shadow-2xl shadow-black/40"} w-full bg-white`}
         />
       );

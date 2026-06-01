@@ -47,6 +47,7 @@ func ExtractTarGz(sourcePath string, workspace string) error {
 	defer gzipReader.Close()
 
 	reader := tar.NewReader(gzipReader)
+	totalBytes := int64(0)
 	for {
 		header, err := reader.Next()
 		if errors.Is(err, io.EOF) {
@@ -65,7 +66,7 @@ func ExtractTarGz(sourcePath string, workspace string) error {
 		}
 
 		target := filepath.Join(workspace, relative)
-		if !strings.HasPrefix(target, workspace) {
+		if !pathInside(workspace, target) {
 			return errors.New("archive entry escapes workspace")
 		}
 
@@ -75,6 +76,13 @@ func ExtractTarGz(sourcePath string, workspace string) error {
 				return err
 			}
 		case tar.TypeReg:
+			if header.Size > 1_000_000 {
+				return fmt.Errorf("archive entry too large for %s", header.Name)
+			}
+			totalBytes += header.Size
+			if totalBytes > 2_000_000 {
+				return errors.New("archive is too large")
+			}
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return err
 			}
@@ -100,13 +108,31 @@ func safeArchivePath(name string) (string, error) {
 	if normalized == "." {
 		return ".", nil
 	}
-	if strings.HasPrefix(normalized, "..") {
+	if normalized == ".." || strings.HasPrefix(normalized, ".."+string(filepath.Separator)) {
 		return "", errors.New("archive contains path traversal")
+	}
+	blocked := map[string]struct{}{
+		".git":         {},
+		".next":        {},
+		"build":        {},
+		"dist":         {},
+		"node_modules": {},
 	}
 	for _, part := range strings.Split(normalized, string(filepath.Separator)) {
 		if strings.HasPrefix(part, ".env") {
 			return "", errors.New("archive contains forbidden env file")
 		}
+		if _, isBlocked := blocked[part]; isBlocked {
+			return "", errors.New("archive contains forbidden build artifact path")
+		}
 	}
 	return normalized, nil
+}
+
+func pathInside(root string, target string) bool {
+	relative, err := filepath.Rel(root, target)
+	if err != nil {
+		return false
+	}
+	return relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)) && !filepath.IsAbs(relative)
 }

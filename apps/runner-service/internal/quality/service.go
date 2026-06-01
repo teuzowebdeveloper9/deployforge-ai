@@ -153,10 +153,12 @@ func detectStack(workspace string) string {
 func commandsForStack(workspace string, stack string) []executor.Command {
 	commands := []executor.Command{}
 	if strings.Contains(stack, "js-ts") {
-		commands = append(commands, executor.Command{Name: "npm", Args: []string{"install"}})
+		commands = append(commands, executor.Command{Name: "npm", Args: []string{"install", "--ignore-scripts", "--no-audit", "--fund=false"}})
 		for _, script := range []string{"lint", "typecheck", "test", "build"} {
-			if packageHasScript(workspace, script) {
+			if allowed, exists := packageScriptAllowed(workspace, script); exists && allowed {
 				commands = append(commands, executor.Command{Name: "npm", Args: []string{"run", script}})
+			} else if exists {
+				commands = append(commands, blockedScriptCommand(script))
 			}
 		}
 	}
@@ -175,19 +177,33 @@ func commandsForStack(workspace string, stack string) []executor.Command {
 	return commands
 }
 
-func packageHasScript(workspace string, script string) bool {
+func packageScriptAllowed(workspace string, script string) (bool, bool) {
 	raw, err := os.ReadFile(filepath.Join(workspace, "package.json"))
 	if err != nil {
-		return false
+		return false, false
 	}
 	var packageJSON struct {
 		Scripts map[string]string `json:"scripts"`
 	}
 	if err := json.Unmarshal(raw, &packageJSON); err != nil {
-		return false
+		return false, false
 	}
-	_, ok := packageJSON.Scripts[script]
-	return ok
+	command, ok := packageJSON.Scripts[script]
+	if !ok {
+		return false, false
+	}
+	expected := "node scripts/deployforge-quality.mjs " + script
+	return strings.Join(strings.Fields(command), " ") == expected, true
+}
+
+func blockedScriptCommand(script string) executor.Command {
+	return executor.Command{
+		Name: "node",
+		Args: []string{
+			"-e",
+			"console.error('Blocked unsafe npm script: " + script + "'); process.exit(1)",
+		},
+	}
 }
 
 func exists(path string) bool {

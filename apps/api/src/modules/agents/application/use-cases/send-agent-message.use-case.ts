@@ -1,6 +1,8 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
 import { PrismaService } from "../../../../shared/database/prisma.service";
+import { assertAppOwnership } from "../../../../shared/security/app-authorization";
+import { AuthenticatedUser } from "../../../auth/application/ports/auth-provider.port";
 import { GeneratedAppFilesService } from "../../../generation/application/services/generated-app-files.service";
 import { RequestQualityGateUseCase } from "../../../quality/application/use-cases/request-quality-gate.use-case";
 import { QueuePort, QUEUE_PORT } from "../../../queue/application/ports/queue.port";
@@ -25,12 +27,14 @@ export class SendAgentMessageUseCase {
     private readonly qualityGate: RequestQualityGateUseCase
   ) {}
 
-  async execute(appId: string, dto: AgentMessageDto) {
-    const app = await this.prisma.app.findUnique({
-      where: { id: appId },
-      select: { id: true, userId: true, name: true, description: true }
-    });
-    if (!app) throw new NotFoundException("App not found");
+  async execute(user: AuthenticatedUser, appId: string, dto: AgentMessageDto) {
+    const app = assertAppOwnership(
+      await this.prisma.app.findUnique({
+        where: { id: appId },
+        select: { id: true, userId: true, name: true, description: true }
+      }),
+      user
+    );
 
     const run = await this.conversations.startRun(appId, dto.message);
     await this.conversations.saveMessage(appId, "user", dto.message);
@@ -83,7 +87,7 @@ export class SendAgentMessageUseCase {
       payload: { appId: app.id, versionId, versionNumber }
     });
 
-    const quality = await this.qualityGate.execute(app.id, version.id);
+    const quality = await this.qualityGate.execute(user, app.id, version.id);
     const response = [
       generated.notes || "Generated a runnable app update from your prompt.",
       "",

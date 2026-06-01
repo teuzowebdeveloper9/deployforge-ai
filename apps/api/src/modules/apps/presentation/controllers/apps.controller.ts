@@ -25,7 +25,7 @@ export class AppsController {
   }
 
   @Get(":appId")
-  get(@Param("appId") appId: string) {
-    return this.getApp.execute(appId);
+  get(@Headers() headers: Record<string, string | string[] | undefined>, @Param("appId") appId: string) {
+    return this.getApp.execute(this.auth.currentUser(headers), appId);
   }
 }

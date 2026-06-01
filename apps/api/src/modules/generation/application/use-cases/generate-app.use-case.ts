@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import { assertAppOwnership } from "../../../../shared/security/app-authorization";
 import { AgentServiceClient } from "../../../agents/infrastructure/providers/agent-service.client";
 import { PrismaAgentConversationRepository } from "../../../agents/infrastructure/providers/prisma-agent-conversation.repository";
 import { AuthenticatedUser } from "../../../auth/application/ports/auth-provider.port";
@@ -65,7 +66,7 @@ export class GenerateAppUseCase {
       payload: { appId: app.id, versionId, versionNumber }
     });
 
-    const quality = await this.qualityGate.execute(app.id, version.id);
+    const quality = await this.qualityGate.execute(user, app.id, version.id);
     const agentSummary = [
       generated.notes || "Application files were generated from the prompt.",
       "",
@@ -100,9 +101,8 @@ export class GenerateAppUseCase {
     };
   }
 
-  async preview(appId: string) {
-    const app = await this.apps.findById(appId);
-    if (!app) return null;
+  async preview(user: AuthenticatedUser, appId: string) {
+    const app = assertAppOwnership(await this.apps.findById(appId), user);
     try {
       return (await this.storage.getObject(this.previewPath(app.userId, app.id))).toString("utf8");
     } catch {

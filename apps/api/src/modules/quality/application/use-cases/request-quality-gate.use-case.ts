@@ -1,4 +1,5 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { AuthenticatedUser } from "../../../auth/application/ports/auth-provider.port";
 import { BUILDS_REPOSITORY, BuildsRepository } from "../../../builds/domain/repositories/builds.repository";
 import { QueuePort, QUEUE_PORT } from "../../../queue/application/ports/queue.port";
 import { STORAGE_PORT, StoragePort } from "../../../storage/application/ports/storage.port";
@@ -15,9 +16,10 @@ export class RequestQualityGateUseCase {
     private readonly runner: RunnerClient
   ) {}
 
-  async execute(appId: string, versionId: string) {
+  async execute(user: AuthenticatedUser, appId: string, versionId: string) {
     const owner = await this.versions.getAppOwner(appId);
     if (!owner) throw new NotFoundException("App not found");
+    if (owner.userId !== user.id) throw new NotFoundException("App not found");
 
     const version = await this.versions.findById(appId, versionId);
     if (!version) throw new NotFoundException("Version not found");

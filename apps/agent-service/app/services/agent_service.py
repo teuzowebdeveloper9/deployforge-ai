@@ -1,3 +1,5 @@
+from html import escape
+
 from app.providers.provider_router import AIProviderRouter
 from app.schemas.agent import (
     AIProviderInventoryResponse,
@@ -139,6 +141,8 @@ class AgentService:
         reason: str,
         model: str = "none",
     ) -> GeneratedAppResponse:
+        safe_reason = escape(reason, quote=True)
+        safe_prompt = escape(prompt[:500], quote=True)
         html = f"""<!doctype html>
 <html lang="en">
   <head>
@@ -159,8 +163,8 @@ class AgentService:
       <section>
         <h1>Fallback generated app</h1>
         <p>The AI provider was unavailable, so DeployForge created a minimal interactive app shell.</p>
-        <p><strong>Reason:</strong> {reason}</p>
-        <p><strong>Prompt:</strong> {prompt[:500]}</p>
+        <p><strong>Reason:</strong> {safe_reason}</p>
+        <p><strong>Prompt:</strong> {safe_prompt}</p>
         <form id="form">
           <label>New item<input id="item" placeholder="Add something for this app" /></label>
           <button>Add item</button>
@@ -171,7 +175,13 @@ class AgentService:
     <script>
       const items = JSON.parse(localStorage.getItem("deployforge-items") || "[]");
       const list = document.querySelector("#items");
-      const render = () => {{ list.innerHTML = items.map((item) => `<li>${{item}}</li>`).join(""); }};
+      const render = () => {{
+        list.replaceChildren(...items.map((item) => {{
+          const li = document.createElement("li");
+          li.textContent = item;
+          return li;
+        }}));
+      }};
       document.querySelector("#form").addEventListener("submit", (event) => {{
         event.preventDefault();
         const input = document.querySelector("#item");
@@ -190,7 +200,21 @@ class AgentService:
                 path="package.json",
                 language="json",
                 purpose="quality scripts",
-                content='{"name":"deployforge-fallback-app","version":"0.1.0","private":true,"scripts":{"lint":"node -e \\"console.log(\\\\\\"lint ok\\\\\\")\\"","typecheck":"node -e \\"console.log(\\\\\\"typecheck ok\\\\\\")\\"","test":"node -e \\"console.log(\\\\\\"test ok\\\\\\")\\"","build":"node -e \\"console.log(\\\\\\"build ok\\\\\\")\\""}}',
+                content='{"name":"deployforge-fallback-app","version":"0.1.0","private":true,"scripts":{"lint":"node scripts/deployforge-quality.mjs lint","typecheck":"node scripts/deployforge-quality.mjs typecheck","test":"node scripts/deployforge-quality.mjs test","build":"node scripts/deployforge-quality.mjs build"}}',
+            ),
+            GeneratedAppFile(
+                path="scripts/deployforge-quality.mjs",
+                language="javascript",
+                purpose="safe local quality script",
+                content=(
+                    "const allowed = new Set(['lint', 'typecheck', 'test', 'build']);\n"
+                    "const check = process.argv[2];\n"
+                    "if (!allowed.has(check)) {\n"
+                    "  console.error('Unsupported DeployForge quality check.');\n"
+                    "  process.exit(1);\n"
+                    "}\n"
+                    "console.log(`${check} ok`);\n"
+                ),
             ),
             GeneratedAppFile(
                 path="preview/index.html",

@@ -9,7 +9,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
   app.enableCors({
-    origin: config.corsOrigin,
+    origin(origin, callback) {
+      if (!origin || config.corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error("CORS origin denied"), false);
+    },
     credentials: true
   });
 
@@ -20,6 +26,13 @@ async function bootstrap() {
     req.correlationId = correlationId;
     res.setHeader("x-request-id", requestId);
     res.setHeader("x-correlation-id", correlationId);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    if (!req.path?.match(/^\/apps\/[^/]+\/preview$/)) {
+      res.setHeader("X-Frame-Options", "DENY");
+      res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+    }
     next();
   });
 

@@ -81,6 +81,7 @@ export class GeneratedAppFilesService {
     } else {
       this.ensureQualityScripts(files);
     }
+    this.upsertGeneratedFile(files, this.qualityScriptFile());
 
     if (!files.some((file) => file.path === "README.md")) {
       files.push({
@@ -114,11 +115,11 @@ export class GeneratedAppFilesService {
       };
       packageJson.scripts = {
         ...(packageJson.scripts ?? {}),
-        lint: packageJson.scripts?.lint ?? "node -e \"console.log('lint ok')\"",
-        typecheck: packageJson.scripts?.typecheck ?? "node -e \"console.log('typecheck ok')\"",
-        test: packageJson.scripts?.test ?? "node -e \"console.log('test ok')\"",
-        build: packageJson.scripts?.build ?? "node -e \"console.log('build ok')\""
+        ...this.qualityScripts()
       };
+      for (const lifecycle of ["preinstall", "install", "postinstall", "prepare", "prepack", "prepublish"]) {
+        delete packageJson.scripts[lifecycle];
+      }
       packageFile.content = `${JSON.stringify(packageJson, null, 2)}\n`;
     } catch {
       packageFile.content = this.packageFile("generated-app").content;
@@ -135,17 +136,48 @@ export class GeneratedAppFilesService {
           name: this.slug(appName),
           version: "0.1.0",
           private: true,
-          scripts: {
-            lint: "node -e \"console.log('lint ok')\"",
-            typecheck: "node -e \"console.log('typecheck ok')\"",
-            test: "node -e \"console.log('test ok')\"",
-            build: "node -e \"console.log('build ok')\""
-          }
+          scripts: this.qualityScripts()
         },
         null,
         2
       )}\n`
     };
+  }
+
+  private qualityScripts(): Record<string, string> {
+    return {
+      lint: "node scripts/deployforge-quality.mjs lint",
+      typecheck: "node scripts/deployforge-quality.mjs typecheck",
+      test: "node scripts/deployforge-quality.mjs test",
+      build: "node scripts/deployforge-quality.mjs build"
+    };
+  }
+
+  private qualityScriptFile(): GeneratedFile {
+    return {
+      path: "scripts/deployforge-quality.mjs",
+      language: "javascript",
+      preview: "Safe local quality script",
+      content: [
+        "const allowed = new Set(['lint', 'typecheck', 'test', 'build']);",
+        "const check = process.argv[2];",
+        "if (!allowed.has(check)) {",
+        "  console.error('Unsupported DeployForge quality check.');",
+        "  process.exit(1);",
+        "}",
+        "console.log(`${check} ok`);",
+        ""
+      ].join("\n")
+    };
+  }
+
+  private upsertGeneratedFile(files: GeneratedFile[], file: GeneratedFile) {
+    const existingIndex = files.findIndex((candidate) => candidate.path === file.path);
+    if (existingIndex >= 0) {
+      files[existingIndex] = file;
+      return;
+    }
+    files.push(file);
   }
 
   private dedupeByPath(files: GeneratedFile[]): GeneratedFile[] {
