@@ -8,7 +8,7 @@ This phase does not implement a skills system. Skills are a future evolution and
 
 ## What Is Included
 
-- Next.js frontend with an AI-first prompt home, animated drawer sidebar, project chat, agent activity timeline and expandable preview panel.
+- Next.js frontend with Tailwind-first styling, an AI-first prompt home, animated drawer sidebar, project chat, agent activity timeline and expandable preview panel.
 - NestJS Core API with Prisma/PostgreSQL, modular domains and orchestration endpoints.
 - FastAPI agent-service with Mistral integration for planning, analysis and generated app file sets.
 - Go runner-service for quality gates and report generation.
