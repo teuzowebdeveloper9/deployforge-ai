@@ -10,7 +10,7 @@ This phase does not implement a skills system. Skills are a future evolution and
 
 - Next.js frontend with Tailwind-first styling, an AI-first prompt home, animated drawer sidebar, project chat, agent activity timeline and expandable preview panel.
 - NestJS Core API with Prisma/PostgreSQL, modular domains and orchestration endpoints.
-- FastAPI agent-service with Mistral integration for planning, analysis and generated app file sets.
+- FastAPI agent-service with prioritized AI provider routing for planning, analysis and generated app file sets.
 - Go runner-service for quality gates and report generation.
 - PostgreSQL, Redis/BullMQ, MinIO-ready storage, local Docker Registry, Prometheus, Loki and Grafana through Docker Compose.
 - GitHub Actions CI with frontend, API, agent-service, runner-service, Docker and safety checks.
@@ -22,7 +22,7 @@ This phase does not implement a skills system. Skills are a future evolution and
 apps/
   web/             Next.js App Router frontend
   api/             NestJS Core API, Prisma and orchestration
-  agent-service/   FastAPI service backed by Mistral
+  agent-service/   FastAPI service backed by prioritized AI providers
   runner-service/  Go quality-gate runner
 packages/
   shared-contracts/
@@ -54,7 +54,7 @@ web
      -> postgres for metadata
      -> storage for snapshots, logs, reports and preview artifacts
      -> redis/bullmq for local events/jobs
-     -> agent-service for Mistral planning/generation
+     -> agent-service for AI planning/generation
      -> runner-service for quality gates
 ```
 
@@ -100,15 +100,21 @@ apps/agent-service/.env.example
 apps/runner-service/.env.example
 ```
 
-The only external provider key normally needed for local AI generation is:
+The agent-service detects configured AI provider keys and tries them in priority order. The default order favors current coding-heavy community/frontier choices and keeps Mistral as the last remote fallback:
 
 ```txt
 apps/agent-service/.env.example
+AI_PROVIDER_ORDER="anthropic,gemini,openai,openrouter,deepseek,mistral"
+ANTHROPIC_API_KEY="replace_me"
+GEMINI_API_KEY="replace_me"
+OPENAI_API_KEY="replace_me"
+OPENROUTER_API_KEY="replace_me"
+DEEPSEEK_API_KEY="replace_me"
 MISTRAL_API_KEY="replace_me"
-MISTRAL_MODEL="mistral-large-latest"
 ```
 
-For Docker Compose, provide `MISTRAL_API_KEY` through your shell or local runtime environment before starting the stack. Never commit the real value.
+For Docker Compose, provide one or more provider keys through your shell or local runtime environment before starting the stack. Never commit real values.
+Gemini tries `GEMINI_MODEL` first and then `GEMINI_FALLBACK_MODELS` so quota failures on Pro models can fall back to Flash.
 
 More detail:
 
@@ -143,7 +149,7 @@ List apps:
 curl http://localhost:3001/apps
 ```
 
-Generate a full app with Mistral-backed files, snapshot, quality gate and preview:
+Generate a full app with AI-backed files, snapshot, quality gate and preview:
 
 ```bash
 curl -X POST http://localhost:3001/apps/generate \

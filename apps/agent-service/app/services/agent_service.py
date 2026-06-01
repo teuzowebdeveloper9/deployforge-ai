@@ -1,6 +1,11 @@
-from app.core.config import settings
-from app.providers.mistral_provider import MistralProvider
-from app.schemas.agent import AgentResponse, GeneratedAppFile, GeneratedAppResponse
+from app.providers.provider_router import AIProviderRouter
+from app.schemas.agent import (
+    AIProviderInventoryResponse,
+    AIProviderStatus,
+    AgentResponse,
+    GeneratedAppFile,
+    GeneratedAppResponse,
+)
 from app.security.prompt_guard import PromptGuard
 from app.services.prompt_builder import PromptBuilder
 
@@ -9,41 +14,57 @@ class AgentService:
     def __init__(self) -> None:
         self.prompt_builder = PromptBuilder()
         self.prompt_guard = PromptGuard()
-        self.provider = MistralProvider()
+        self.provider = AIProviderRouter()
+
+    def providers(self) -> AIProviderInventoryResponse:
+        return AIProviderInventoryResponse(
+            providers=[
+                AIProviderStatus(
+                    provider=status.provider,
+                    model=status.model,
+                    configured=status.configured,
+                    priority=status.priority,
+                )
+                for status in self.provider.statuses()
+            ]
+        )
 
     async def plan(self, prompt: str) -> AgentResponse:
         guarded_prompt = self.prompt_guard.annotate(prompt)
         messages = self.prompt_builder.build_messages(guarded_prompt)
-        content, provider = await self.provider.complete(messages)
+        result = await self.provider.complete(messages)
         return AgentResponse(
             mode="plan",
-            response=content,
-            provider=provider,
-            model=settings.mistral_model,
+            response=result.content,
+            provider=result.provider,
+            model=result.model,
         )
 
     async def analyze(self, prompt: str) -> AgentResponse:
         guarded_prompt = self.prompt_guard.annotate(f"Analise tecnicamente este pedido:\n{prompt}")
         messages = self.prompt_builder.build_messages(guarded_prompt)
-        content, provider = await self.provider.complete(messages)
+        result = await self.provider.complete(messages)
         return AgentResponse(
             mode="analyze",
-            response=content,
-            provider=provider,
-            model=settings.mistral_model,
+            response=result.content,
+            provider=result.provider,
+            model=result.model,
         )
 
     async def generate_app(self, prompt: str) -> GeneratedAppResponse:
         guarded_prompt = self.prompt_guard.annotate(prompt)
         messages = self._build_generation_messages(guarded_prompt)
         try:
-            payload, provider = await self.provider.complete_json(messages)
-            if provider == "mistral":
-                return self._from_payload(payload, provider)
+            result = await self.provider.complete_json(messages)
+            if result.provider != "local-fallback":
+                return self._from_payload(result.payload, result.provider, result.model)
         except Exception as exc:
-            return self._fallback_generated_app(prompt, f"Mistral generation failed: {exc.__class__.__name__}")
+            return self._fallback_generated_app(
+                prompt,
+                f"AI generation failed: {exc.__class__.__name__}",
+            )
 
-        return self._fallback_generated_app(prompt, "MISTRAL_API_KEY is not configured.")
+        return self._fallback_generated_app(prompt, self._provider_fallback_reason(result.attempts))
 
     def _build_generation_messages(self, prompt: str) -> list[dict[str, str]]:
         system = (
@@ -80,7 +101,7 @@ class AgentService:
         )
         return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
-    def _from_payload(self, payload: dict, provider: str) -> GeneratedAppResponse:
+    def _from_payload(self, payload: dict, provider: str, model: str) -> GeneratedAppResponse:
         files_payload = payload.get("files", [])
         if not isinstance(files_payload, list):
             raise ValueError("files must be a list")
@@ -98,14 +119,26 @@ class AgentService:
 
         return GeneratedAppResponse(
             provider=provider,
-            model=settings.mistral_model,
+            model=model,
             app_name=str(payload.get("app_name", "Generated App")),
             description=str(payload.get("description", "Generated application")),
             notes=str(payload.get("notes", "")),
             files=files,
         )
 
-    def _fallback_generated_app(self, prompt: str, reason: str) -> GeneratedAppResponse:
+    def _provider_fallback_reason(self, attempts: tuple[str, ...]) -> str:
+        if attempts == ("no-configured-provider",):
+            return "No supported AI provider API key is configured."
+        if attempts:
+            return f"All configured AI providers failed: {', '.join(attempts)}."
+        return "No supported AI provider returned a usable response."
+
+    def _fallback_generated_app(
+        self,
+        prompt: str,
+        reason: str,
+        model: str = "none",
+    ) -> GeneratedAppResponse:
         html = f"""<!doctype html>
 <html lang="en">
   <head>
@@ -180,9 +213,9 @@ class AgentService:
         ]
         return GeneratedAppResponse(
             provider="local-fallback",
-            model=settings.mistral_model,
+            model=model,
             app_name="Fallback generated app",
-            description="Interactive fallback app generated when Mistral is unavailable.",
+            description="Interactive fallback app generated when AI providers are unavailable.",
             notes=reason,
             files=files,
         )

@@ -1,7 +1,7 @@
 [project]
 name = "deployforge-agent-service"
 version = "0.1.0"
-description = "FastAPI Mistral-backed planning service for DeployForge AI"
+description = "FastAPI AI-provider-backed planning service for DeployForge AI"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.111",

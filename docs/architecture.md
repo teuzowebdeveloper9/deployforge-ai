@@ -6,14 +6,14 @@ DeployForge AI uses a pragmatic microservices monorepo. Each deployable service 
 
 - `web`: prompt-first builder plus workspace screens for apps, versions, builds, agent prompts and env metadata.
 - `api`: generation/orchestration boundary and source of truth for metadata.
-- `agent-service`: Mistral-backed planning and analysis service.
+- `agent-service`: prioritized AI provider router for planning, analysis and bounded app generation.
 - `runner-service`: isolated quality gate executor.
 
 ## Core Flow
 
 1. A user writes an app prompt in `web`.
 2. `web` calls `POST /apps/generate` in `api`.
-3. `api` asks `agent-service` to generate a bounded file set through Mistral and creates app metadata in PostgreSQL.
+3. `api` asks `agent-service` to generate a bounded file set through the best configured AI provider and creates app metadata in PostgreSQL.
 4. `api` validates generated paths/content, saves a source snapshot through `StoragePort` and emits domain events through `QueuePort`.
 5. `api` asks `runner-service` to run the quality gate for the snapshot and stores logs/reports in storage.
 6. `web` shows the generation timeline, generated file list, quality status and preview HTML.

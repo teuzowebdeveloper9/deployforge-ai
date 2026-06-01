@@ -9,7 +9,7 @@ DeployForge AI is a monorepo for an AI-first platform that creates, versions, an
 ```txt
 apps/web              Next.js prompt builder and workspace UI
 apps/api              NestJS generation/orchestration API and source of truth
-apps/agent-service    FastAPI service that talks to Mistral
+apps/agent-service    FastAPI service that talks to configured AI providers
 apps/runner-service   Go service for isolated quality gates
 packages/shared-*     Contracts and stable shared configuration only
 infra/                Docker, local infrastructure and operational scripts
@@ -24,7 +24,7 @@ No `.skills` directory or skills runtime belongs in this phase.
 
 - Web starts with a prompt-first app builder and then exposes workspace screens.
 - API owns users, apps, versions, builds, env metadata, audit logs, generated snapshots and orchestration.
-- Agent Service receives prompts, builds safe system prompts and returns structured Mistral-backed analysis or generated file payloads. It never edits the repository directly.
+- Agent Service receives prompts, builds safe system prompts and returns structured AI-backed analysis or generated file payloads. It selects configured providers by priority and never edits the repository directly.
 - Runner Service receives quality gate jobs, runs checks inside a temporary workspace and returns logs/report data.
 - Shared packages hold contracts, schemas and stable helpers only. They must not contain product business rules.
 

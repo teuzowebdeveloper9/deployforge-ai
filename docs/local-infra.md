@@ -26,7 +26,7 @@ DeployForge AI is now planned around a local/open-source infrastructure profile 
 3. `api` publishes MVP events through Redis/BullMQ.
 4. Snapshots and reports use filesystem storage now, with MinIO as the object-storage target.
 5. `runner-service` executes quality gates as a separate container.
-6. `agent-service` calls Mistral and returns plans or analysis without editing files.
+6. `agent-service` calls the best configured AI provider and returns plans or analysis without editing files.
 7. Grafana, Loki and Prometheus are available as the local observability base.
 
 ## Secrets Flow

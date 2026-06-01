@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AgentStep, apiRequest, AppVersion, Build, sendAgentMessage } from "@/lib/api";
+import { AgentStep, apiRequest, API_URL, AppVersion, Build, sendAgentMessage } from "@/lib/api";
 import { useAgentMessages, useAgentSteps, useApp, usePreview } from "@/lib/hooks";
 import { AgentChat } from "./AgentChat";
 import { PreviewPanel } from "./PreviewPanel";
@@ -106,7 +106,11 @@ export function ProjectWorkspace({ appId }: { appId: string }) {
       ]);
       await Promise.all([refreshMessages(), refreshSteps(), refreshApp(), refreshPreview()]);
       setSteps(buildLiveSteps(appId, "done"));
-      setPreview((current) => (current.status === "ready" && current.url ? current : { appId, status: "ready" }));
+      setPreview({
+        appId,
+        status: "ready",
+        url: response.previewUrl ? `${API_URL}${response.previewUrl}` : undefined
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Agent run failed";
       setSteps(buildLiveSteps(appId, "failed"));

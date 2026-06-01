@@ -10,7 +10,7 @@ Build the base platform only. Do not implement a project skills system, do not a
 
 - `apps/web`: Next.js prompt-first builder plus app workspace, versions, builds, agent prompts and env metadata UI.
 - `apps/api`: NestJS Core API with Prisma/PostgreSQL, app generation, orchestration, storage, queue, secrets, auth and local/open-source-ready ports.
-- `apps/agent-service`: FastAPI service using Mistral for safe planning, analysis and bounded generated app file payloads. It never edits files directly.
+- `apps/agent-service`: FastAPI service using prioritized AI providers for safe planning, analysis and bounded generated app file payloads. It never edits files directly.
 - `apps/runner-service`: Go service that executes quality gates in a temporary workspace with timeouts and safe logs.
 - `packages/shared-contracts`: event and DTO contracts only.
 - `packages/shared-config`: stable configuration helpers only.

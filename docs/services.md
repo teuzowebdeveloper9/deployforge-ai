@@ -21,7 +21,7 @@ Generation uses `POST /apps/generate`. The API calls agent-service for a plan, c
 
 ## Agent Service
 
-FastAPI service. It builds the DeployForge AI system prompt, calls Mistral and returns structured planning, analysis or generated app files. `POST /agent/generate-app` returns `app_name`, `description`, `notes` and a bounded `files[]` payload used by the API snapshot flow. If `MISTRAL_API_KEY` is missing or `replace_me`, it returns a deterministic local fallback so the MVP still runs.
+FastAPI service. It builds the DeployForge AI system prompt, detects configured AI provider keys, tries providers in priority order and returns structured planning, analysis or generated app files. The default remote order is Anthropic, Gemini, OpenAI, OpenRouter, DeepSeek and Mistral. Gemini also has an internal model fallback from the configured Pro model to Flash models when quota or model access fails. `GET /agent/providers` returns configured provider status without secret values. `POST /agent/generate-app` returns `app_name`, `description`, `notes` and a bounded `files[]` payload used by the API snapshot flow. If no provider key is configured or every provider fails, it returns a deterministic local fallback so the MVP still runs.
 
 ## Runner Service
 

@@ -46,14 +46,21 @@ func Run(ctx context.Context, workspace string, timeout time.Duration, command C
 func sanitizedEnv(env []string, workspace string) []string {
 	filtered := make([]string, 0, len(env)+2)
 	for _, item := range env {
-		lower := strings.ToLower(item)
-		if strings.HasPrefix(lower, "mistral_api_key=") ||
-			strings.HasPrefix(lower, "authorization=") ||
-			strings.HasPrefix(lower, "api_key=") {
+		key, _, ok := strings.Cut(strings.ToLower(item), "=")
+		if ok && isSensitiveEnvKey(key) {
 			continue
 		}
 		filtered = append(filtered, item)
 	}
 	filtered = append(filtered, "HOME="+workspace)
 	return filtered
+}
+
+func isSensitiveEnvKey(key string) bool {
+	return key == "authorization" ||
+		key == "api_key" ||
+		strings.HasSuffix(key, "_api_key") ||
+		strings.Contains(key, "token") ||
+		strings.Contains(key, "secret") ||
+		strings.Contains(key, "password")
 }
