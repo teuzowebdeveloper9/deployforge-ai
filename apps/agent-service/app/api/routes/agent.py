@@ -1,6 +1,12 @@
 from fastapi import APIRouter
 
-from app.schemas.agent import AgentRequest, AgentResponse, GeneratedAppResponse, HealthResponse
+from app.schemas.agent import (
+    AIProviderInventoryResponse,
+    AgentRequest,
+    AgentResponse,
+    GeneratedAppResponse,
+    HealthResponse,
+)
 from app.services.agent_service import AgentService
 
 router = APIRouter(tags=["agent"])
@@ -20,6 +26,11 @@ async def analyze(request: AgentRequest) -> AgentResponse:
 @router.post("/agent/generate-app", response_model=GeneratedAppResponse)
 async def generate_app(request: AgentRequest) -> GeneratedAppResponse:
     return await agent_service.generate_app(request.prompt)
+
+
+@router.get("/agent/providers", response_model=AIProviderInventoryResponse)
+def providers() -> AIProviderInventoryResponse:
+    return agent_service.providers()
 
 
 @router.get("/health", response_model=HealthResponse)

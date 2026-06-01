@@ -126,6 +126,16 @@ export interface AgentMessageResponse {
     provider: string;
     model: string;
   };
+  version?: AppVersion;
+  quality?: {
+    build: Build;
+    quality: {
+      status: string;
+      qualityScore: number;
+    };
+  };
+  files?: GeneratedFileSummary[];
+  previewUrl?: string;
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {

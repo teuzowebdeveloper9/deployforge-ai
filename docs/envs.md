@@ -24,4 +24,4 @@ Planned secret options:
 - Vault for runtime secret retrieval.
 - SOPS or Sealed Secrets for encrypted configuration later.
 
-Do not hardcode registry, storage, queue, Mistral or provider credentials in source code.
+Do not hardcode registry, storage, queue or AI provider credentials in source code.

@@ -32,3 +32,14 @@ class GeneratedAppResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     service: str
+
+
+class AIProviderStatus(BaseModel):
+    provider: str
+    model: str
+    configured: bool
+    priority: int
+
+
+class AIProviderInventoryResponse(BaseModel):
+    providers: list[AIProviderStatus]

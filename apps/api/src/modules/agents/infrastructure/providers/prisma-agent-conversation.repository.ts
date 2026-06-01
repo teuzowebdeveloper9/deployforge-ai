@@ -61,8 +61,8 @@ export class PrismaAgentConversationRepository {
       {
         id: "planning",
         appId,
-        title: "Planning next agent move",
-        description: "Asking the agent to reason over the current project instead of creating a new app.",
+        title: "Generating app update",
+        description: "Asking the agent-service for a runnable file payload for this project.",
         status: runStatus,
         order: 2
       },

@@ -10,7 +10,7 @@ DeployForge AI uses Docker Compose as the MVP compute layer. Services stay separ
 - `registry`: local Docker image registry.
 - `web`: Next.js frontend.
 - `api`: NestJS orchestration API.
-- `agent-service`: FastAPI Mistral planning service.
+- `agent-service`: FastAPI AI provider routing service.
 - `runner-service`: Go quality gate worker.
 - `prometheus`: metrics collection base.
 - `loki`: log storage base.

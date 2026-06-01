@@ -6,7 +6,8 @@ The agent-service:
 
 - Receives a user prompt.
 - Builds a base software architecture system prompt.
-- Calls Mistral when configured.
+- Detects configured AI provider keys and calls the best available provider first.
+- Falls back through Anthropic, Gemini, OpenAI, OpenRouter, DeepSeek and Mistral by default.
 - Returns a technical plan or analysis.
 - Never edits files directly.
 - Never suggests committing secrets or weakening quality checks.
