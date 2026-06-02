@@ -41,9 +41,21 @@ export class SnapshotService {
 
     try {
       const files = input.files && input.files.length > 0 ? input.files : this.defaultFiles(input.versionNumber);
+      if (files.length > 64) {
+        throw new Error("Snapshot contains too many files");
+      }
+      const totalSize = files.reduce((sum, file) => sum + file.content.length, 0);
+      if (totalSize > 1_000_000) {
+        throw new Error("Snapshot is too large");
+      }
+
       for (const file of files) {
         const safeRelative = this.safeRelativePath(file.path);
         const fullPath = path.join(tempDir, safeRelative);
+        const relativeToTemp = path.relative(tempDir, fullPath);
+        if (relativeToTemp === ".." || relativeToTemp.startsWith(`..${path.sep}`) || path.isAbsolute(relativeToTemp)) {
+          throw new Error("Snapshot file path escapes workspace");
+        }
         await mkdir(path.dirname(fullPath), { recursive: true });
         await writeFile(fullPath, file.content);
       }
@@ -72,12 +84,13 @@ export class SnapshotService {
   }
 
   private safeRelativePath(filePath: string): string {
-    const normalized = path.posix.normalize(filePath.replaceAll("\\", "/"));
-    if (normalized.startsWith("../") || normalized === ".." || path.posix.isAbsolute(normalized)) {
+    const normalized = path.posix.normalize(filePath.replaceAll("\\", "/").trim());
+    if (!normalized || normalized === "." || normalized.startsWith("../") || normalized === ".." || path.posix.isAbsolute(normalized)) {
       throw new Error("Snapshot file path escapes workspace");
     }
-    if (normalized.split("/").some((part) => part.startsWith(".env"))) {
-      throw new Error("Snapshot cannot include real env files");
+    const blocked = new Set([".git", "node_modules", "dist", "build", ".next"]);
+    if (normalized.split("/").some((part) => part.startsWith(".env") || blocked.has(part))) {
+      throw new Error("Snapshot contains a forbidden file path");
     }
     return normalized;
   }

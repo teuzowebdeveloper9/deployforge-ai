@@ -1,5 +1,6 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { randomUUID } from "node:crypto";
+import { AuthenticatedUser } from "../../../auth/application/ports/auth-provider.port";
 import { QueuePort, QUEUE_PORT } from "../../../queue/application/ports/queue.port";
 import { SnapshotService } from "../../../storage/application/services/snapshot.service";
 import { VERSIONS_REPOSITORY, VersionsRepository } from "../../domain/repositories/versions.repository";
@@ -13,9 +14,10 @@ export class CreateVersionUseCase {
     @Inject(QUEUE_PORT) private readonly queue: QueuePort
   ) {}
 
-  async execute(appId: string, dto: CreateVersionDto) {
+  async execute(user: AuthenticatedUser, appId: string, dto: CreateVersionDto) {
     const owner = await this.versions.getAppOwner(appId);
     if (!owner) throw new NotFoundException("App not found");
+    if (owner.userId !== user.id) throw new NotFoundException("App not found");
 
     const versionId = randomUUID();
     const versionNumber = await this.versions.nextVersionNumber(appId);
@@ -33,7 +35,7 @@ export class CreateVersionUseCase {
       versionNumber,
       storagePath: snapshot.storagePath,
       checksum: snapshot.checksum,
-      createdBy: dto.createdBy ?? owner.userId
+      createdBy: user.id
     });
 
     await this.queue.publish({

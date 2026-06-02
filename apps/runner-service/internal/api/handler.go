@@ -18,6 +18,7 @@ func RegisterRoutes(mux *http.ServeMux, service quality.Service, logger *slog.Lo
 	})
 
 	mux.HandleFunc("POST /run-quality-gate", func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 1_000_000)
 		var request quality.Request
 		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_json"})
@@ -31,6 +32,8 @@ func RegisterRoutes(mux *http.ServeMux, service quality.Service, logger *slog.Lo
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
 }

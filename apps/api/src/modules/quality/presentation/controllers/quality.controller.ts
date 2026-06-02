@@ -1,12 +1,20 @@
-import { Controller, Param, Post } from "@nestjs/common";
+import { Controller, Headers, Inject, Param, Post } from "@nestjs/common";
+import { AUTH_PROVIDER, AuthProvider } from "../../../auth/application/ports/auth-provider.port";
 import { RequestQualityGateUseCase } from "../../application/use-cases/request-quality-gate.use-case";
 
 @Controller("apps/:appId/versions/:versionId/quality-gate")
 export class QualityController {
-  constructor(private readonly requestQualityGate: RequestQualityGateUseCase) {}
+  constructor(
+    @Inject(AUTH_PROVIDER) private readonly auth: AuthProvider,
+    private readonly requestQualityGate: RequestQualityGateUseCase
+  ) {}
 
   @Post()
-  run(@Param("appId") appId: string, @Param("versionId") versionId: string) {
-    return this.requestQualityGate.execute(appId, versionId);
+  run(
+    @Headers() headers: Record<string, string | string[] | undefined>,
+    @Param("appId") appId: string,
+    @Param("versionId") versionId: string
+  ) {
+    return this.requestQualityGate.execute(this.auth.currentUser(headers), appId, versionId);
   }
 }

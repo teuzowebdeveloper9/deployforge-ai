@@ -1,4 +1,4 @@
-import { IsArray, IsOptional, IsString, MaxLength, ValidateNested } from "class-validator";
+import { ArrayMaxSize, IsArray, IsOptional, IsString, MaxLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 export class SnapshotFileDto {
@@ -19,6 +19,7 @@ export class CreateVersionDto {
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(32)
   @ValidateNested({ each: true })
   @Type(() => SnapshotFileDto)
   files?: SnapshotFileDto[];

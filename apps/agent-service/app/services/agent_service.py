@@ -225,7 +225,21 @@ class AgentService:
                 path="package.json",
                 language="json",
                 purpose="quality scripts",
-                content='{"name":"deployforge-fallback-app","version":"0.1.0","private":true,"scripts":{"lint":"node -e \\"console.log(\\\\\\"lint ok\\\\\\")\\"","typecheck":"node -e \\"console.log(\\\\\\"typecheck ok\\\\\\")\\"","test":"node -e \\"console.log(\\\\\\"test ok\\\\\\")\\"","build":"node -e \\"console.log(\\\\\\"build ok\\\\\\")\\""}}',
+                content='{"name":"deployforge-fallback-app","version":"0.1.0","private":true,"scripts":{"lint":"node scripts/deployforge-quality.mjs lint","typecheck":"node scripts/deployforge-quality.mjs typecheck","test":"node scripts/deployforge-quality.mjs test","build":"node scripts/deployforge-quality.mjs build"}}',
+            ),
+            GeneratedAppFile(
+                path="scripts/deployforge-quality.mjs",
+                language="javascript",
+                purpose="safe local quality script",
+                content=(
+                    "const allowed = new Set(['lint', 'typecheck', 'test', 'build']);\n"
+                    "const check = process.argv[2];\n"
+                    "if (!allowed.has(check)) {\n"
+                    "  console.error('Unsupported DeployForge quality check.');\n"
+                    "  process.exit(1);\n"
+                    "}\n"
+                    "console.log(`${check} ok`);\n"
+                ),
             ),
             GeneratedAppFile(
                 path="preview/index.html",

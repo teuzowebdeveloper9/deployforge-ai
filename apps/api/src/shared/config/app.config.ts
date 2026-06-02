@@ -6,7 +6,7 @@ export interface AppConfig {
   storageRoot: string;
   runnerServiceUrl: string;
   agentServiceUrl: string;
-  corsOrigin: string;
+  corsOrigins: string[];
 }
 
 function numberFromEnv(value: string | undefined, fallback: number): number {
@@ -15,6 +15,11 @@ function numberFromEnv(value: string | undefined, fallback: number): number {
 }
 
 export function loadConfig(): AppConfig {
+  const corsOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3000")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
   return {
     nodeEnv: process.env.NODE_ENV ?? "development",
     port: numberFromEnv(process.env.PORT, 3001),
@@ -23,6 +28,6 @@ export function loadConfig(): AppConfig {
     storageRoot: process.env.STORAGE_ROOT ?? "./storage",
     runnerServiceUrl: process.env.RUNNER_SERVICE_URL ?? "http://localhost:8082",
     agentServiceUrl: process.env.AGENT_SERVICE_URL ?? "http://localhost:8001",
-    corsOrigin: process.env.CORS_ORIGIN ?? "http://localhost:3000"
+    corsOrigins
   };
 }
