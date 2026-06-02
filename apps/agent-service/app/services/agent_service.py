@@ -1,3 +1,5 @@
+from html import escape
+
 from app.providers.provider_router import AIProviderRouter
 from app.schemas.agent import (
     AIProviderInventoryResponse,
@@ -7,6 +9,7 @@ from app.schemas.agent import (
     GeneratedAppResponse,
 )
 from app.security.prompt_guard import PromptGuard
+from app.skills.project_design_skill import LangChainDesignerSkill, ProjectDesignSkill, ProjectTemplate
 from app.services.prompt_builder import PromptBuilder
 
 
@@ -15,6 +18,8 @@ class AgentService:
         self.prompt_builder = PromptBuilder()
         self.prompt_guard = PromptGuard()
         self.provider = AIProviderRouter()
+        self.design_skill = ProjectDesignSkill()
+        self.design_tools: LangChainDesignerSkill = self.design_skill.langchain_toolkit()
 
     def providers(self) -> AIProviderInventoryResponse:
         return AIProviderInventoryResponse(
@@ -53,7 +58,8 @@ class AgentService:
 
     async def generate_app(self, prompt: str) -> GeneratedAppResponse:
         guarded_prompt = self.prompt_guard.annotate(prompt)
-        messages = self._build_generation_messages(guarded_prompt)
+        template = self.design_tools.select_template(prompt)
+        messages = self._build_generation_messages(guarded_prompt, template)
         try:
             result = await self.provider.complete_json(messages)
             if result.provider != "local-fallback":
@@ -62,17 +68,27 @@ class AgentService:
             return self._fallback_generated_app(
                 prompt,
                 f"AI generation failed: {exc.__class__.__name__}",
+                template=template,
             )
 
-        return self._fallback_generated_app(prompt, self._provider_fallback_reason(result.attempts))
+        return self._fallback_generated_app(
+            prompt,
+            self._provider_fallback_reason(result.attempts),
+            template=template,
+        )
 
-    def _build_generation_messages(self, prompt: str) -> list[dict[str, str]]:
+    def _build_generation_messages(
+        self,
+        prompt: str,
+        template: ProjectTemplate,
+    ) -> list[dict[str, str]]:
         system = (
             "Voce e o gerador de codigo da DeployForge AI. Gere uma aplicacao real e pequena, "
             "baseada exatamente no pedido do usuario. Nao gere apenas uma tela generica ou mockada. "
             "A aplicacao deve ser um app web estatico autocontido para preview local, com HTML, CSS "
             "e JavaScript interativo no arquivo preview/index.html. Use localStorage quando fizer sentido, "
             "formularios, listas, filtros, cards, estados vazios e dados iniciais coerentes com o dominio. "
+            "Use a skill de design da DeployForge para decompor apps comuns em uma base concreta antes de customizar. "
             "Nunca inclua secrets, .env, chaves reais, tracking externo ou chamadas para APIs privadas. "
             "Retorne somente JSON valido, sem markdown."
         )
@@ -97,6 +113,8 @@ class AgentService:
             "- Nao crie .env nem qualquer arquivo que comece com .env.\n"
             "- Nao use placeholders como TODO no comportamento principal.\n"
             "- Gere no maximo 8 arquivos.\n\n"
+            "Skill de design e base selecionada:\n"
+            f"{self.design_skill.instruction_for(template)}\n\n"
             f"Pedido do usuario:\n{prompt}"
         )
         return [{"role": "system", "content": system}, {"role": "user", "content": user}]
@@ -138,7 +156,18 @@ class AgentService:
         prompt: str,
         reason: str,
         model: str = "none",
+        template: ProjectTemplate | None = None,
     ) -> GeneratedAppResponse:
+        if template is not None:
+            return self.design_tools.unpack_response(
+                prompt=prompt,
+                reason=reason,
+                model=model,
+                template_id=template.template_id,
+            )
+
+        safe_reason = escape(reason, quote=True)
+        safe_prompt = escape(prompt[:500], quote=True)
         html = f"""<!doctype html>
 <html lang="en">
   <head>
@@ -159,8 +188,8 @@ class AgentService:
       <section>
         <h1>Fallback generated app</h1>
         <p>The AI provider was unavailable, so DeployForge created a minimal interactive app shell.</p>
-        <p><strong>Reason:</strong> {reason}</p>
-        <p><strong>Prompt:</strong> {prompt[:500]}</p>
+        <p><strong>Reason:</strong> {safe_reason}</p>
+        <p><strong>Prompt:</strong> {safe_prompt}</p>
         <form id="form">
           <label>New item<input id="item" placeholder="Add something for this app" /></label>
           <button>Add item</button>
@@ -171,7 +200,13 @@ class AgentService:
     <script>
       const items = JSON.parse(localStorage.getItem("deployforge-items") || "[]");
       const list = document.querySelector("#items");
-      const render = () => {{ list.innerHTML = items.map((item) => `<li>${{item}}</li>`).join(""); }};
+      const render = () => {{
+        list.replaceChildren(...items.map((item) => {{
+          const li = document.createElement("li");
+          li.textContent = item;
+          return li;
+        }}));
+      }};
       document.querySelector("#form").addEventListener("submit", (event) => {{
         event.preventDefault();
         const input = document.querySelector("#item");

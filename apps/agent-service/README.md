@@ -14,7 +14,10 @@ Use `GET /agent/providers` to inspect configured providers without exposing key 
 
 Gemini first tries `GEMINI_MODEL` and then `GEMINI_FALLBACK_MODELS`, so a Pro quota failure can fall back to Flash before the service returns the local fallback.
 
+The generator also uses a LangChain-style project design skill with structured tools to select and unpack reusable bases for common app prompts such as dashboards, to-do lists, CRM, inventory, bookings, expenses, kanban and customer portals.
+
 See `docs/ai-provider-routing.md` for the full routing behavior and supported environment variables.
+See `docs/agent-design-skill.md` for the app bases used by the design skill.
 
 ## Commands
 
