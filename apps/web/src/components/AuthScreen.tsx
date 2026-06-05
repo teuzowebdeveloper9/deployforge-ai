@@ -1,9 +1,10 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Check, Eye, EyeOff, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { login, register, verifyAuthSession } from "@/lib/auth";
+import { isStrongPassword, passwordPolicyChecks } from "@/lib/password-policy";
 
 type AuthMode = "login" | "register";
 type FocusedField = "name" | "organization" | "email" | "password" | null;
@@ -22,6 +23,8 @@ export function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const passwordChecks = useMemo(() => passwordPolicyChecks(password), [password]);
+  const passwordReady = mode === "login" || isStrongPassword(password);
   const robotMood = useMemo(() => {
     if (loading || checkingSession) return "thinking";
     if (focusedField === "password" && !passwordVisible) return "hiding";
@@ -42,6 +45,13 @@ export function AuthScreen() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (mode === "register" && !passwordReady) {
+      setError("A senha ainda nao atende todos os requisitos.");
+      setFocusedField("password");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -201,11 +211,32 @@ export function AuthScreen() {
                 <div className="mt-2 text-right text-xs font-bold text-[#637083]">
                   {passwordVisible ? "Hide" : "Ver senha"}
                 </div>
+                {mode === "register" ? (
+                  <div className="mt-3 grid gap-2 rounded-[18px] border border-[#101828]/10 bg-white/70 p-3 shadow-[0_10px_26px_rgba(7,16,28,0.04)]">
+                    {passwordChecks.map((check) => (
+                      <div
+                        key={check.id}
+                        className={`flex items-center gap-2 text-xs font-bold ${
+                          check.valid ? "text-[#12805c]" : "text-[#7a8494]"
+                        }`}
+                      >
+                        <span
+                          className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${
+                            check.valid ? "bg-[#dff8ec] text-[#12805c]" : "bg-[#eef1f4] text-[#7a8494]"
+                          }`}
+                        >
+                          {check.valid ? <Check aria-hidden="true" size={13} strokeWidth={3} /> : <X aria-hidden="true" size={12} strokeWidth={3} />}
+                        </span>
+                        <span>{check.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </label>
 
               <button
                 type="submit"
-                disabled={loading || checkingSession}
+                disabled={loading || checkingSession || !passwordReady}
                 className="mt-2 w-full rounded-[22px] bg-[#07101c] px-4 py-4 text-base font-black text-white shadow-[0_18px_44px_rgba(7,16,28,0.22)] hover:-translate-y-0.5 hover:bg-[#152336] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading || checkingSession ? "Verificando..." : mode === "login" ? "Entrar agora" : "Criar e entrar"}
