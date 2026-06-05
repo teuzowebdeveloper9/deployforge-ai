@@ -7,6 +7,7 @@ import {
   apiRequest,
   AppProject,
   AppVersion,
+  authHeaders,
   Build,
   DeployForgeApp,
   PreviewState,
@@ -107,7 +108,11 @@ export function usePreview(appId: string) {
   const refresh = useCallback(async () => {
     setPreview((current) => ({ ...current, status: current.status === "ready" ? "ready" : "loading" }));
     try {
-      const response = await fetch(`${API_URL}/apps/${appId}/preview`, { method: "GET", cache: "no-store" });
+      const response = await fetch(`${API_URL}/apps/${appId}/preview`, {
+        method: "GET",
+        headers: await authHeaders(),
+        cache: "no-store"
+      });
       if (!response.ok) {
         setPreview({ appId, status: "empty" });
         return;

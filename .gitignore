@@ -5,8 +5,10 @@ build/
 .pytest_cache/
 __pycache__/
 *.pyc
+*.tsbuildinfo
 coverage/
 /storage/
+apps/auth-service/src/generated/
 .env
 .env.*
 !.env.example

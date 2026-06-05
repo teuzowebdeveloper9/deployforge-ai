@@ -8,16 +8,18 @@ async function bootstrap() {
   const config = loadConfig();
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
-  app.enableCors({
-    origin(origin, callback) {
-      if (!origin || config.corsOrigins.includes(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(new Error("CORS origin denied"), false);
-    },
-    credentials: true
-  });
+  if (config.enableCors) {
+    app.enableCors({
+      origin(origin, callback) {
+        if (!origin || config.corsOrigins.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+        callback(new Error("CORS origin denied"), false);
+      },
+      credentials: true
+    });
+  }
 
   app.use((req: any, res: any, next: () => void) => {
     const requestId = req.headers["x-request-id"] ?? randomUUID();

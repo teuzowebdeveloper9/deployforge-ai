@@ -9,6 +9,8 @@ This phase does not implement a skills system. Skills are a future evolution and
 ## What Is Included
 
 - Next.js frontend with Tailwind-first styling, an AI-first prompt home, animated drawer sidebar, project chat, agent activity timeline and expandable preview panel.
+- NGINX API Gateway with auth-request enforcement and private Docker networking for upstream services.
+- NestJS Auth Service for registration, login, access tokens, refresh token rotation, logout and gateway verification.
 - NestJS Core API with Prisma/PostgreSQL, modular domains and orchestration endpoints.
 - FastAPI agent-service with prioritized AI provider routing for planning, analysis and generated app file sets.
 - Go runner-service for quality gates and report generation.
@@ -21,6 +23,7 @@ This phase does not implement a skills system. Skills are a future evolution and
 ```txt
 apps/
   web/             Next.js App Router frontend
+  auth-service/    NestJS authentication and gateway verification
   api/             NestJS Core API, Prisma and orchestration
   agent-service/   FastAPI service backed by prioritized AI providers
   runner-service/  Go quality-gate runner
@@ -36,7 +39,7 @@ docs/              Architecture and operating docs
 
 ## Product Flow
 
-1. Open `http://localhost:3000`.
+1. Open `http://localhost:8080`.
 2. Describe the app you want in the large prompt input.
 3. The frontend creates a project draft and immediately navigates to `/apps/{appId}/agent`.
 4. The first prompt is sent inside the project workspace.
@@ -50,12 +53,14 @@ docs/              Architecture and operating docs
 
 ```txt
 web
-  -> api
-     -> postgres for metadata
-     -> storage for snapshots, logs, reports and preview artifacts
-     -> redis/bullmq for local events/jobs
-     -> agent-service for AI planning/generation
-     -> runner-service for quality gates
+  -> gateway
+     -> auth-service for identity and gateway verification
+     -> api
+        -> postgres for metadata
+        -> storage for snapshots, logs, reports and preview artifacts
+        -> redis/bullmq for local events/jobs
+        -> agent-service for AI planning/generation
+        -> runner-service for quality gates
 ```
 
 The API is the source of truth for metadata. It does not execute user code directly. It coordinates app creation, version snapshots, agent messages, quality gates and preview artifacts.
@@ -75,17 +80,10 @@ Then open:
 
 | Service | URL |
 | --- | --- |
-| Web | `http://localhost:3000` |
-| API health | `http://localhost:3001/health` |
-| Agent Service health | `http://localhost:8001/health` |
-| Runner Service health | `http://localhost:8082/health` |
-| PostgreSQL | `localhost:15432` |
-| MinIO Console | `http://localhost:9001` |
-| Local Registry | `localhost:5000` |
-| Prometheus | `http://localhost:9090` |
-| Grafana | `http://localhost:3002` |
+| Public Gateway and Web | `http://localhost:8080` |
+| Gateway health | `http://localhost:8080/gateway/health` |
 
-Docker Compose starts PostgreSQL, Redis, MinIO, local Docker Registry, API, web, agent-service, runner-service, Prometheus, Loki and Grafana. The API applies Prisma migrations on startup.
+Docker Compose starts PostgreSQL, Redis, MinIO, local Docker Registry, gateway, auth-service, API, web, agent-service, runner-service, Prometheus, Loki and Grafana. Only the gateway publishes a host port. The API and auth-service apply Prisma migrations on startup.
 
 ## Environment Files
 
@@ -95,6 +93,7 @@ Only use these templates as references:
 
 ```txt
 apps/web/.env.example
+apps/auth-service/.env.example
 apps/api/.env.example
 apps/agent-service/.env.example
 apps/runner-service/.env.example
@@ -118,6 +117,7 @@ Gemini tries `GEMINI_MODEL` first and then `GEMINI_FALLBACK_MODELS` so quota fai
 
 More detail:
 
+- `docs/gateway-auth.md`
 - `docs/ai-provider-routing.md`
 - `docs/agent-design-skill.md`
 - `docs/envs.md`
@@ -140,50 +140,54 @@ More detail:
 Create a draft app:
 
 ```bash
-curl -X POST http://localhost:3001/apps \
+curl -X POST http://localhost:8080/api/apps \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <accessToken>" \
   -d '{"name":"demo-app","description":"Local MVP app"}'
 ```
 
 List apps:
 
 ```bash
-curl http://localhost:3001/apps
+curl http://localhost:8080/api/apps -H "Authorization: Bearer <accessToken>"
 ```
 
 Generate a full app with AI-backed files, snapshot, quality gate and preview:
 
 ```bash
-curl -X POST http://localhost:3001/apps/generate \
+curl -X POST http://localhost:8080/api/apps/generate \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <accessToken>" \
   -d '{"prompt":"Create a CRM with customers, pipeline dashboard and notes."}'
 ```
 
 Continue an existing project chat:
 
 ```bash
-curl -X POST http://localhost:3001/apps/<appId>/messages \
+curl -X POST http://localhost:8080/api/apps/<appId>/messages \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <accessToken>" \
   -d '{"message":"Improve this app with a billing dashboard and explain the quality gates."}'
 ```
 
 Read messages and agent steps:
 
 ```bash
-curl http://localhost:3001/apps/<appId>/messages
-curl http://localhost:3001/apps/<appId>/steps
+curl http://localhost:8080/api/apps/<appId>/messages -H "Authorization: Bearer <accessToken>"
+curl http://localhost:8080/api/apps/<appId>/steps -H "Authorization: Bearer <accessToken>"
 ```
 
 Open preview HTML:
 
 ```bash
-curl http://localhost:3001/apps/<appId>/preview
+curl http://localhost:8080/api/apps/<appId>/preview -H "Authorization: Bearer <accessToken>"
 ```
 
 Run quality gate for a version:
 
 ```bash
-curl -X POST http://localhost:3001/apps/<appId>/versions/<versionId>/quality-gate
+curl -X POST http://localhost:8080/api/apps/<appId>/versions/<versionId>/quality-gate \
+  -H "Authorization: Bearer <accessToken>"
 ```
 
 ## Development Commands
@@ -202,6 +206,18 @@ API:
 
 ```bash
 cd apps/api
+npm install
+npx prisma generate
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+Auth Service:
+
+```bash
+cd apps/auth-service
 npm install
 npx prisma generate
 npm run lint

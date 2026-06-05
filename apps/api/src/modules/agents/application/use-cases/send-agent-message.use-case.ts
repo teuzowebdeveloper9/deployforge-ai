@@ -55,7 +55,7 @@ export class SendAgentMessageUseCase {
       `User requested change: ${dto.message}`
     ].join("\n");
 
-    const agentGeneration = await this.agentService.generateApp(generationPrompt);
+    const agentGeneration = await this.agentService.generateApp(generationPrompt, user);
     const generated = this.generatedFiles.create({
       prompt: dto.message,
       requestedName: app.name,

@@ -55,6 +55,24 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  auth-service:
+    name: Auth Service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/auth-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
   agent-service:
     name: Agent Service
     runs-on: ubuntu-latest
@@ -93,6 +111,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -f apps/web/Dockerfile -t deployforge-web:ci .
+      - run: docker build -f apps/auth-service/Dockerfile -t deployforge-auth-service:ci .
       - run: docker build -f apps/api/Dockerfile -t deployforge-api:ci .
       - run: docker build -f apps/agent-service/Dockerfile -t deployforge-agent-service:ci .
       - run: docker build -f apps/runner-service/Dockerfile -t deployforge-runner-service:ci .

@@ -28,7 +28,7 @@ export class GenerateAppUseCase {
   ) {}
 
   async execute(user: AuthenticatedUser, dto: GenerateAppDto) {
-    const agentGeneration = await this.agent.generateApp(dto.prompt);
+    const agentGeneration = await this.agent.generateApp(dto.prompt, user);
     const generated = this.files.create({ prompt: dto.prompt, requestedName: dto.name, generated: agentGeneration });
     const app = await this.apps.create({
       user,

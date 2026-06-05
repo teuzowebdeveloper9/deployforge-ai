@@ -10,6 +10,7 @@ type Config struct {
 	Port          string
 	StorageRoot   string
 	QualityTimeout time.Duration
+	GatewayServiceToken string
 }
 
 func Load() Config {
@@ -34,5 +35,6 @@ func Load() Config {
 		Port:          port,
 		StorageRoot:   storageRoot,
 		QualityTimeout: time.Duration(timeoutSeconds) * time.Second,
+		GatewayServiceToken: os.Getenv("GATEWAY_SERVICE_TOKEN"),
 	}
 }

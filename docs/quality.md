@@ -5,6 +5,7 @@ Quality gates protect the architecture and user-generated applications.
 ## CI Checks
 
 - Web: install, lint, typecheck, build.
+- Auth Service: install, Prisma generate, lint, typecheck, test, build.
 - API: install, Prisma generate, lint, typecheck, test, build.
 - Agent Service: ruff check, pytest.
 - Runner Service: go test, go vet, go build.

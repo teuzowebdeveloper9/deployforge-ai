@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AppProject } from "@/lib/api";
+import { logout } from "@/lib/auth";
 import { useApps } from "@/lib/hooks";
 
 const navItems = [
@@ -23,7 +24,14 @@ const statusTone: Record<AppProject["status"], string> = {
 
 export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { apps, loading } = useApps();
+
+  async function signOut() {
+    await logout();
+    onClose();
+    router.replace("/login");
+  }
 
   return (
     <aside
@@ -118,11 +126,18 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
       <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.045] p-3">
         <div className="flex items-center gap-3">
           <div className="grid h-9 w-9 place-items-center rounded-full bg-slate-800 text-xs font-bold text-cyan-200">DEV</div>
-          <div>
+          <div className="min-w-0 flex-1">
             <div className="text-sm font-medium text-white">Dev mode</div>
             <div className="text-xs text-slate-500">Local agent workspace</div>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={signOut}
+          className="mt-3 w-full rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-sm font-semibold text-slate-300 hover:bg-white/[0.075] hover:text-white"
+        >
+          Logout
+        </button>
       </div>
     </aside>
   );

@@ -15,9 +15,19 @@ Only `.env.example` files are allowed in the repository. Do not create or edit r
 
 Each service includes a `.env.example` with safe placeholders.
 
+Current templates:
+
+```txt
+apps/web/.env.example
+apps/auth-service/.env.example
+apps/api/.env.example
+apps/agent-service/.env.example
+apps/runner-service/.env.example
+```
+
 ## Local/Open-Source Runtime
 
-In the MVP, Docker Compose injects local development values and the database stores only `secret_reference` metadata.
+In the MVP, Docker Compose injects local development values and the database stores only `secret_reference` metadata. Gateway/auth shared tokens such as `GATEWAY_INTERNAL_AUTH_TOKEN` and `GATEWAY_SERVICE_TOKEN` must be supplied from runtime configuration outside source control for non-local deployments.
 
 Planned secret options:
 
