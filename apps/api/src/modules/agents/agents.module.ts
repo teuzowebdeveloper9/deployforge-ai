@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { AuthModule } from "../auth/auth.module";
 import { GeneratedAppFilesService } from "../generation/application/services/generated-app-files.service";
 import { QualityModule } from "../quality/quality.module";
 import { QueueModule } from "../queue/queue.module";
@@ -12,7 +13,7 @@ import { PrismaAgentConversationRepository } from "./infrastructure/providers/pr
 import { AgentsController } from "./presentation/controllers/agents.controller";
 
 @Module({
-  imports: [VersionsModule, QueueModule, StorageModule, QualityModule],
+  imports: [AuthModule, VersionsModule, QueueModule, StorageModule, QualityModule],
   controllers: [AgentsController],
   providers: [
     SendAgentMessageUseCase,

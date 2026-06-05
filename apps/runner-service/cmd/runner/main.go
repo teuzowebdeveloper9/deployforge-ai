@@ -16,7 +16,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	service := quality.NewService(cfg, logger)
-	api.RegisterRoutes(mux, service, logger)
+	api.RegisterRoutes(mux, service, logger, cfg)
 
 	logger.Info("starting runner-service", "port", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, mux); err != nil {

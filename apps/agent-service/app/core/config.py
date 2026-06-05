@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     deepseek_model: str = "deepseek-v4-pro"
     mistral_api_key: str = "replace_me"
     mistral_model: str = "mistral-large-latest"
+    gateway_service_token: str = ""
     log_level: str = "INFO"
 
     model_config = SettingsConfigDict(extra="ignore")

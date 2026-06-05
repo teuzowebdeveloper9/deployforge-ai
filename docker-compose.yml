@@ -1,4 +1,29 @@
 services:
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: deployforge-gateway
+    environment:
+      PUBLIC_CORS_ORIGIN: ${PUBLIC_CORS_ORIGIN:-http://localhost:8080}
+      GATEWAY_INTERNAL_AUTH_TOKEN: ${GATEWAY_INTERNAL_AUTH_TOKEN:-dev_internal_auth_token_change_me}
+      GATEWAY_SERVICE_TOKEN: ${GATEWAY_SERVICE_TOKEN:-dev_gateway_service_token_change_me}
+    ports:
+      - "8080:80"
+    volumes:
+      - ./infra/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./infra/nginx/includes:/etc/nginx/includes:ro
+    command:
+      - /bin/sh
+      - -c
+      - envsubst '$$GATEWAY_INTERNAL_AUTH_TOKEN $$GATEWAY_SERVICE_TOKEN $$PUBLIC_CORS_ORIGIN' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'
+    depends_on:
+      - web
+      - auth-service
+      - api
+      - agent-service
+      - runner-service
+    networks:
+      - backend
+
   postgres:
     image: postgres:16-alpine
     container_name: deployforge-postgres
@@ -6,8 +31,8 @@ services:
       POSTGRES_USER: deployforge
       POSTGRES_PASSWORD: deployforge_dev_password
       POSTGRES_DB: deployforge
-    ports:
-      - "15432:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -15,17 +40,21 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    networks:
+      - backend
 
   redis:
     image: redis:7-alpine
     container_name: deployforge-redis
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 20
+    networks:
+      - backend
 
   minio:
     image: minio/minio:latest
@@ -34,37 +63,45 @@ services:
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    expose:
+      - "9000"
+      - "9001"
     volumes:
       - minio-data:/data
+    networks:
+      - backend
 
   registry:
     image: registry:2
     container_name: deployforge-registry
-    ports:
-      - "5000:5000"
+    expose:
+      - "5000"
     volumes:
       - registry-data:/var/lib/registry
+    networks:
+      - backend
 
   prometheus:
     image: prom/prometheus:latest
     container_name: deployforge-prometheus
-    ports:
-      - "9090:9090"
+    expose:
+      - "9090"
     volumes:
       - ./infra/docker/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - backend
 
   loki:
     image: grafana/loki:2.9.8
     container_name: deployforge-loki
     command: -config.file=/etc/loki/local-config.yaml
-    ports:
-      - "3100:3100"
+    expose:
+      - "3100"
     volumes:
       - ./infra/docker/observability/loki-config.yml:/etc/loki/local-config.yaml:ro
       - loki-data:/loki
+    networks:
+      - backend
 
   grafana:
     image: grafana/grafana:latest
@@ -72,13 +109,40 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
-    ports:
-      - "3002:3000"
+    expose:
+      - "3000"
     volumes:
       - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
       - loki
+    networks:
+      - backend
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: apps/auth-service/Dockerfile
+    container_name: deployforge-auth-service
+    environment:
+      NODE_ENV: development
+      PORT: "3003"
+      DATABASE_URL: postgresql://deployforge:deployforge_dev_password@postgres:5432/deployforge?schema=public
+      JWT_ACCESS_TOKEN_SECRET: ${JWT_ACCESS_TOKEN_SECRET:-dev_access_token_secret_change_me_32_bytes}
+      JWT_ISSUER: ${JWT_ISSUER:-deployforge-auth}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-deployforge-gateway}
+      ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
+      REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
+      REFRESH_TOKEN_PEPPER: ${REFRESH_TOKEN_PEPPER:-dev_refresh_token_pepper_change_me_32_bytes}
+      GATEWAY_INTERNAL_AUTH_TOKEN: ${GATEWAY_INTERNAL_AUTH_TOKEN:-dev_internal_auth_token_change_me}
+    expose:
+      - "3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-c", "npx prisma migrate deploy && npm run start:dev"]
+    networks:
+      - backend
 
   api:
     build:
@@ -102,10 +166,12 @@ services:
       OBSERVABILITY_PROVIDER: stdout
       RUNNER_SERVICE_URL: http://runner-service:8082
       AGENT_SERVICE_URL: http://agent-service:8001
-      AUTH_PROVIDER: dev
-      CORS_ORIGIN: http://localhost:3000
-    ports:
-      - "3001:3001"
+      AUTH_PROVIDER: gateway
+      GATEWAY_SERVICE_TOKEN: ${GATEWAY_SERVICE_TOKEN:-dev_gateway_service_token_change_me}
+      ENABLE_API_CORS: "false"
+      CORS_ORIGIN: http://localhost:8080
+    expose:
+      - "3001"
     volumes:
       - storage-data:/data/storage
     depends_on:
@@ -120,6 +186,8 @@ services:
       runner-service:
         condition: service_started
     command: ["sh", "-c", "npx prisma migrate deploy && npm run start:dev"]
+    networks:
+      - backend
 
   web:
     build:
@@ -127,12 +195,14 @@ services:
       dockerfile: apps/web/Dockerfile
     container_name: deployforge-web
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001
-    ports:
-      - "3000:3000"
+      NEXT_PUBLIC_API_URL: /api
+    expose:
+      - "3000"
     depends_on:
       - api
     command: ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
+    networks:
+      - backend
 
   agent-service:
     build:
@@ -141,6 +211,7 @@ services:
     container_name: deployforge-agent-service
     environment:
       PORT: "8001"
+      GATEWAY_SERVICE_TOKEN: ${GATEWAY_SERVICE_TOKEN:-dev_gateway_service_token_change_me}
       AI_PROVIDER_ORDER: ${AI_PROVIDER_ORDER:-anthropic,gemini,openai,openrouter,deepseek,mistral}
       AI_MAX_TOKENS: ${AI_MAX_TOKENS:-24000}
       AI_REQUEST_TIMEOUT_SECONDS: ${AI_REQUEST_TIMEOUT_SECONDS:-120}
@@ -160,24 +231,35 @@ services:
       MISTRAL_MODEL: ${MISTRAL_MODEL:-mistral-large-latest}
       LOG_LEVEL: INFO
       OBSERVABILITY_PROVIDER: stdout
-    ports:
-      - "8001:8001"
+    expose:
+      - "8001"
+    networks:
+      - backend
 
   runner-service:
     build:
       context: .
       dockerfile: apps/runner-service/Dockerfile
-    container_name: deployforge-runner-service
+    container_name: deployforge-container-service
     environment:
       PORT: "8082"
       STORAGE_ROOT: /data/storage
       QUALITY_TIMEOUT_SECONDS: "120"
+      GATEWAY_SERVICE_TOKEN: ${GATEWAY_SERVICE_TOKEN:-dev_gateway_service_token_change_me}
       SANDBOX_PROVIDER: local-workspace
       OBSERVABILITY_PROVIDER: stdout
-    ports:
-      - "8082:8082"
+    expose:
+      - "8082"
     volumes:
       - storage-data:/data/storage
+    networks:
+      backend:
+        aliases:
+          - container-service
+
+networks:
+  backend:
+    driver: bridge
 
 volumes:
   postgres-data:

@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { loadConfig } from "../../../shared/config/app.config";
 import { redactSecrets } from "../../../shared/logger/safe-log";
+import { AuthenticatedUser } from "../../auth/application/ports/auth-provider.port";
 import { QualityGateResult } from "../application/dtos/quality-gate.dto";
 
 interface RunnerResponse {
@@ -12,17 +13,19 @@ interface RunnerResponse {
 
 @Injectable()
 export class RunnerClient {
-  private readonly baseUrl = loadConfig().runnerServiceUrl;
+  private readonly config = loadConfig();
+  private readonly baseUrl = this.config.runnerServiceUrl;
 
   async runQualityGate(input: {
     appId: string;
     versionId: string;
     buildId: string;
     sourcePath: string;
+    user?: AuthenticatedUser;
   }): Promise<QualityGateResult> {
     const response = await fetch(`${this.baseUrl}/run-quality-gate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.headers(input.user),
       body: JSON.stringify({
         app_id: input.appId,
         version_id: input.versionId,
@@ -49,6 +52,17 @@ export class RunnerClient {
       qualityScore: payload.quality_score,
       logs: redactSecrets(payload.logs ?? ""),
       report: payload.report ?? {}
+    };
+  }
+
+  private headers(user?: AuthenticatedUser): Record<string, string> {
+    return {
+      "Content-Type": "application/json",
+      ...(this.config.gatewayServiceToken ? { "X-Gateway-Token": this.config.gatewayServiceToken } : {}),
+      ...(user?.id ? { "X-User-Id": user.id } : {}),
+      ...(user?.orgId ? { "X-Org-Id": user.orgId } : {}),
+      ...(user?.role ? { "X-Role": user.role } : {}),
+      ...(user?.plan ? { "X-Plan": user.plan } : {})
     };
   }
 }

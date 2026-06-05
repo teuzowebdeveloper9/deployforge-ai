@@ -1,0 +1,155 @@
+limit_req_zone $binary_remote_addr zone=auth_login:10m rate=5r/m;
+limit_req_zone $binary_remote_addr zone=ai_requests:10m rate=30r/m;
+limit_req_zone $binary_remote_addr zone=container_requests:10m rate=10r/m;
+
+server {
+  listen 80;
+  server_name _;
+  resolver 127.0.0.11 valid=30s ipv6=off;
+  set $web_upstream http://web:3000;
+
+  client_max_body_size 2m;
+  proxy_http_version 1.1;
+  proxy_buffering off;
+
+  set $cors_origin "";
+  if ($http_origin = "${PUBLIC_CORS_ORIGIN}") {
+    set $cors_origin $http_origin;
+  }
+
+  add_header Access-Control-Allow-Origin $cors_origin always;
+  add_header Access-Control-Allow-Credentials "true" always;
+  add_header Access-Control-Allow-Methods "GET,POST,PUT,PATCH,DELETE,OPTIONS" always;
+  add_header Access-Control-Allow-Headers "Authorization,Content-Type,X-Request-Id,X-Correlation-Id" always;
+  add_header Access-Control-Max-Age "600" always;
+  add_header Vary "Origin" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header Referrer-Policy "no-referrer" always;
+  add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+  add_header X-Frame-Options "DENY" always;
+
+  if ($request_method = OPTIONS) {
+    return 204;
+  }
+
+  location = /gateway/health {
+    access_log off;
+    return 200 "ok\n";
+  }
+
+  location = /_auth {
+    internal;
+    proxy_pass http://auth-service:3003/internal/verify;
+    proxy_pass_request_body off;
+    proxy_set_header Content-Length "";
+    proxy_set_header Authorization $http_authorization;
+    proxy_set_header X-Internal-Auth-Token "${GATEWAY_INTERNAL_AUTH_TOKEN}";
+    proxy_set_header X-User-Id "";
+    proxy_set_header X-User-Email "";
+    proxy_set_header X-User-Name "";
+    proxy_set_header X-Org-Id "";
+    proxy_set_header X-Role "";
+    proxy_set_header X-Plan "";
+    proxy_set_header X-Session-Id "";
+    proxy_set_header X-Gateway-Token "";
+  }
+
+  location = /auth/login {
+    limit_req zone=auth_login burst=10 nodelay;
+    proxy_pass http://auth-service:3003;
+    include /etc/nginx/includes/proxy-common.conf;
+    include /etc/nginx/includes/clear-auth-context.conf;
+  }
+
+  location = /auth/register {
+    limit_req zone=auth_login burst=10 nodelay;
+    proxy_pass http://auth-service:3003;
+    include /etc/nginx/includes/proxy-common.conf;
+    include /etc/nginx/includes/clear-auth-context.conf;
+  }
+
+  location = /auth/refresh {
+    limit_req zone=auth_login burst=20 nodelay;
+    proxy_pass http://auth-service:3003;
+    include /etc/nginx/includes/proxy-common.conf;
+    include /etc/nginx/includes/clear-auth-context.conf;
+  }
+
+  location /auth/ {
+    proxy_pass http://auth-service:3003;
+    include /etc/nginx/includes/proxy-common.conf;
+    include /etc/nginx/includes/clear-auth-context.conf;
+  }
+
+  location = /api {
+    return 308 /api/;
+  }
+
+  location /api/ {
+    auth_request /_auth;
+    auth_request_set $auth_user_id $upstream_http_x_user_id;
+    auth_request_set $auth_user_email $upstream_http_x_user_email;
+    auth_request_set $auth_user_name $upstream_http_x_user_name;
+    auth_request_set $auth_org_id $upstream_http_x_org_id;
+    auth_request_set $auth_role $upstream_http_x_role;
+    auth_request_set $auth_plan $upstream_http_x_plan;
+    auth_request_set $auth_session_id $upstream_http_x_session_id;
+
+    rewrite ^/api/(.*)$ /$1 break;
+    proxy_pass http://api:3001;
+    include /etc/nginx/includes/proxy-common.conf;
+    include /etc/nginx/includes/trusted-auth-context.conf;
+    proxy_set_header X-Gateway-Token "${GATEWAY_SERVICE_TOKEN}";
+  }
+
+  location = /ai {
+    return 308 /ai/;
+  }
+
+  location /ai/ {
+    limit_req zone=ai_requests burst=20 nodelay;
+    auth_request /_auth;
+    auth_request_set $auth_user_id $upstream_http_x_user_id;
+    auth_request_set $auth_user_email $upstream_http_x_user_email;
+    auth_request_set $auth_user_name $upstream_http_x_user_name;
+    auth_request_set $auth_org_id $upstream_http_x_org_id;
+    auth_request_set $auth_role $upstream_http_x_role;
+    auth_request_set $auth_plan $upstream_http_x_plan;
+    auth_request_set $auth_session_id $upstream_http_x_session_id;
+
+    rewrite ^/ai/(.*)$ /$1 break;
+    set $agent_upstream http://agent-service:8001;
+    proxy_pass $agent_upstream;
+    include /etc/nginx/includes/proxy-common.conf;
+    include /etc/nginx/includes/trusted-auth-context.conf;
+    proxy_set_header X-Gateway-Token "${GATEWAY_SERVICE_TOKEN}";
+  }
+
+  location = /containers {
+    return 308 /containers/;
+  }
+
+  location /containers/ {
+    limit_req zone=container_requests burst=10 nodelay;
+    auth_request /_auth;
+    auth_request_set $auth_user_id $upstream_http_x_user_id;
+    auth_request_set $auth_user_email $upstream_http_x_user_email;
+    auth_request_set $auth_user_name $upstream_http_x_user_name;
+    auth_request_set $auth_org_id $upstream_http_x_org_id;
+    auth_request_set $auth_role $upstream_http_x_role;
+    auth_request_set $auth_plan $upstream_http_x_plan;
+    auth_request_set $auth_session_id $upstream_http_x_session_id;
+
+    rewrite ^/containers/(.*)$ /$1 break;
+    proxy_pass http://container-service:8082;
+    include /etc/nginx/includes/proxy-common.conf;
+    include /etc/nginx/includes/trusted-auth-context.conf;
+    proxy_set_header X-Gateway-Token "${GATEWAY_SERVICE_TOKEN}";
+  }
+
+  location / {
+    proxy_pass $web_upstream;
+    include /etc/nginx/includes/proxy-common.conf;
+    include /etc/nginx/includes/clear-auth-context.conf;
+  }
+}

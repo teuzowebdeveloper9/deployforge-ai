@@ -1,11 +1,18 @@
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { verifyAuthSession } from "@/lib/auth";
 import { AppSidebar } from "./AppSidebar";
 import { GlowBackground } from "./GlowBackground";
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const isPublicRoute = pathname === "/login";
 
   useEffect(() => {
     const saved = window.localStorage.getItem("deployforge-sidebar-open");
@@ -17,6 +24,26 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [sidebarOpen]);
 
   useEffect(() => {
+    if (isPublicRoute) {
+      setCheckingAuth(false);
+      setAuthorized(false);
+      return;
+    }
+
+    setCheckingAuth(true);
+    verifyAuthSession()
+      .then((session) => {
+        if (!session) {
+          const next = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
+          router.replace(`/login?next=${next}`);
+          return;
+        }
+        setAuthorized(true);
+      })
+      .finally(() => setCheckingAuth(false));
+  }, [isPublicRoute, pathname, router]);
+
+  useEffect(() => {
     if (!sidebarOpen) return;
 
     function closeOnEscape(event: KeyboardEvent) {
@@ -26,6 +53,21 @@ export function AppShell({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [sidebarOpen]);
+
+  if (isPublicRoute) {
+    return <>{children}</>;
+  }
+
+  if (checkingAuth || !authorized) {
+    return (
+      <div className="relative grid min-h-screen place-items-center overflow-hidden text-slate-100">
+        <GlowBackground />
+        <div className="rounded-2xl border border-white/10 bg-white/[0.045] px-5 py-4 text-sm text-slate-300 shadow-2xl shadow-black/30 backdrop-blur-xl">
+          Checking session...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen overflow-x-hidden text-slate-100">

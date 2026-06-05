@@ -8,6 +8,7 @@ DeployForge AI is a monorepo for an AI-first platform that creates, versions, an
 
 ```txt
 apps/web              Next.js prompt builder and workspace UI
+apps/auth-service     NestJS auth, refresh rotation and gateway verification
 apps/api              NestJS generation/orchestration API and source of truth
 apps/agent-service    FastAPI service that talks to configured AI providers
 apps/runner-service   Go service for isolated quality gates
@@ -22,6 +23,8 @@ No `.skills` directory or skills runtime belongs in this phase.
 
 ## Service Boundaries
 
+- Gateway is the only public Docker Compose entrypoint and owns coarse auth routing.
+- Auth Service owns registration, login, refresh rotation, logout and trusted user/org context.
 - Web starts with a prompt-first app builder and then exposes workspace screens.
 - API owns users, apps, versions, builds, env metadata, audit logs, generated snapshots and orchestration.
 - Agent Service receives prompts, builds safe system prompts and returns structured AI-backed analysis or generated file payloads. It selects configured providers by priority and never edits the repository directly.
@@ -36,6 +39,7 @@ No `.skills` directory or skills runtime belongs in this phase.
 - Database access is limited to infrastructure persistence adapters.
 - External providers live behind explicit ports or provider classes.
 - The API must never execute user code directly; quality execution belongs to runner-service.
+- Upstream services must not trust user/org/role/plan headers unless the gateway service token is valid.
 - Generated app creation belongs in the API generation use case; controllers must stay transport-only.
 - Generated file payloads from the agent-service must be validated before snapshotting.
 

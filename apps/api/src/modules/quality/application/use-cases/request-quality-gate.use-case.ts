@@ -40,7 +40,8 @@ export class RequestQualityGateUseCase {
       appId,
       versionId,
       buildId: build.id,
-      sourcePath: this.storage.localPath(version.storagePath)
+      sourcePath: this.storage.localPath(version.storagePath),
+      user
     });
 
     const basePath = `users/${owner.userId}/apps/${appId}/builds/${build.id}`;

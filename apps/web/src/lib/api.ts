@@ -1,4 +1,6 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { clearAuthSession, ensureAuthSession } from "./auth";
+
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api";
 
 export interface DeployForgeApp {
   id: string;
@@ -138,18 +140,35 @@ export interface AgentMessageResponse {
   previewUrl?: string;
 }
 
+export async function authHeaders(): Promise<Record<string, string>> {
+  const session = await ensureAuthSession();
+  return session ? { Authorization: `Bearer ${session.accessToken}` } : {};
+}
+
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  headers.set("Content-Type", "application/json");
+
+  const session = await ensureAuthSession();
+  if (session) {
+    headers.set("Authorization", `Bearer ${session.accessToken}`);
+  }
+
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {})
-    },
+    headers,
     cache: "no-store"
   });
 
   if (!response.ok) {
     const text = await response.text();
+    if (response.status === 401) {
+      clearAuthSession();
+      if (typeof window !== "undefined") {
+        const next = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
+        window.location.assign(`/login?next=${next}`);
+      }
+    }
     throw new Error(text || `Request failed with ${response.status}`);
   }
 

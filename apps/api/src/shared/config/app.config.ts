@@ -6,6 +6,9 @@ export interface AppConfig {
   storageRoot: string;
   runnerServiceUrl: string;
   agentServiceUrl: string;
+  authProvider: string;
+  gatewayServiceToken: string | undefined;
+  enableCors: boolean;
   corsOrigins: string[];
 }
 
@@ -28,6 +31,9 @@ export function loadConfig(): AppConfig {
     storageRoot: process.env.STORAGE_ROOT ?? "./storage",
     runnerServiceUrl: process.env.RUNNER_SERVICE_URL ?? "http://localhost:8082",
     agentServiceUrl: process.env.AGENT_SERVICE_URL ?? "http://localhost:8001",
+    authProvider: process.env.AUTH_PROVIDER ?? "dev",
+    gatewayServiceToken: process.env.GATEWAY_SERVICE_TOKEN,
+    enableCors: process.env.ENABLE_API_CORS !== "false",
     corsOrigins
   };
 }
