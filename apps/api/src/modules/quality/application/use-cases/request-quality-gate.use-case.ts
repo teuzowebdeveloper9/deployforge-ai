@@ -16,7 +16,7 @@ export class RequestQualityGateUseCase {
     private readonly runner: RunnerClient
   ) {}
 
-  async execute(user: AuthenticatedUser, appId: string, versionId: string) {
+  async execute(user: AuthenticatedUser, appId: string, versionId: string, options?: { buildType?: string }) {
     const owner = await this.versions.getAppOwner(appId);
     if (!owner) throw new NotFoundException("App not found");
     if (owner.userId !== user.id) throw new NotFoundException("App not found");
@@ -28,7 +28,7 @@ export class RequestQualityGateUseCase {
       appId,
       versionId,
       status: "RUNNING",
-      type: "QUALITY_GATE"
+      type: options?.buildType ?? "QUALITY_GATE"
     });
 
     await this.queue.publish({
@@ -64,6 +64,6 @@ export class RequestQualityGateUseCase {
       payload: { appId, versionId, buildId: build.id, status: result.status, qualityScore: result.qualityScore }
     });
 
-    return { build: completed, quality: { status: result.status, qualityScore: result.qualityScore } };
+    return { build: completed, quality: { status: result.status, qualityScore: result.qualityScore }, logs: result.logs };
   }
 }

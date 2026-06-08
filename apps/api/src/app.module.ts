@@ -3,6 +3,7 @@ import { AgentsModule } from "./modules/agents/agents.module";
 import { AppsModule } from "./modules/apps/apps.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { BuildsModule } from "./modules/builds/builds.module";
+import { CiCdModule } from "./modules/cicd/cicd.module";
 import { EnvsModule } from "./modules/envs/envs.module";
 import { GenerationModule } from "./modules/generation/generation.module";
 import { QualityModule } from "./modules/quality/quality.module";
@@ -25,6 +26,7 @@ import { HealthController } from "./health.controller";
     AppsModule,
     VersionsModule,
     BuildsModule,
+    CiCdModule,
     QualityModule,
     AgentsModule,
     EnvsModule,

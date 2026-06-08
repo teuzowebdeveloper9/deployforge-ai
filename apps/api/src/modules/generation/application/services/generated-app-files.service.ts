@@ -242,7 +242,7 @@ export class GeneratedAppFilesService {
 
   private previewFromPath(filePath: string): string {
     if (filePath === "preview/index.html") return "Runnable AI-generated preview";
-    if (filePath === "package.json") return "Quality gate scripts";
+    if (filePath === "package.json") return "CI quality scripts";
     if (filePath === "Dockerfile") return "Static preview container";
     if (filePath === "README.md") return "Generated app documentation";
     return "AI-generated source file";

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { apiRequest, AppVersion, Build } from "@/lib/api";
+import { PlayCircle, Wand2 } from "lucide-react";
+import { apiRequest, AppVersion, Build, runCiCdPipeline } from "@/lib/api";
 import { StatusBadge } from "./StatusBadge";
 
 export function BuildsClient({ appId }: { appId: string }) {
@@ -9,6 +10,7 @@ export function BuildsClient({ appId }: { appId: string }) {
   const [builds, setBuilds] = useState<Build[]>([]);
   const [selectedVersion, setSelectedVersion] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
 
   const load = useCallback(async () => {
@@ -32,15 +34,22 @@ export function BuildsClient({ appId }: { appId: string }) {
     return () => window.clearInterval(interval);
   }, [load]);
 
-  async function runQualityGate() {
+  async function runCiCd() {
     if (!selectedVersion) return;
     setRunning(true);
     setError(null);
+    setNotice(null);
     try {
-      await apiRequest(`/apps/${appId}/versions/${selectedVersion}/quality-gate`, { method: "POST" });
+      const result = await runCiCdPipeline(appId, { versionId: selectedVersion, autoFix: true });
+      const fix = result.autoFix.error
+        ? ` AI auto-fix failed: ${result.autoFix.error}`
+        : result.autoFix.attempted
+          ? " AI auto-fix was triggered after the first failure."
+          : "";
+      setNotice(`CI/CD ${result.status}. Initial score: ${result.ci.quality.qualityScore}/100.${fix}`);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to run quality gate");
+      setError(err instanceof Error ? err.message : "Failed to run CI/CD");
     } finally {
       setRunning(false);
     }
@@ -50,8 +59,8 @@ export function BuildsClient({ appId }: { appId: string }) {
     <section className="rounded-lg border border-line bg-surface p-5 shadow-sm">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-ink">Quality gates</h1>
-          <p className="mt-1 text-sm text-muted">Run checks through runner-service and keep the API as orchestration only.</p>
+          <h1 className="text-xl font-semibold text-ink">CI/CD pipeline</h1>
+          <p className="mt-1 text-sm text-muted">Run the selected snapshot through runner-service. Failed runs trigger one AI repair attempt.</p>
         </div>
         <div className="flex gap-2">
           <select
@@ -66,15 +75,17 @@ export function BuildsClient({ appId }: { appId: string }) {
             ))}
           </select>
           <button
-            onClick={runQualityGate}
+            onClick={runCiCd}
             disabled={!selectedVersion || running}
-            className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accentDark disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accentDark disabled:opacity-60"
           >
-            {running ? "Running..." : "Run quality gate"}
+            {running ? <Wand2 className="h-4 w-4" /> : <PlayCircle className="h-4 w-4" />}
+            {running ? "Running CI/CD..." : "Run CI/CD"}
           </button>
         </div>
       </div>
       {error ? <p className="mb-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{error}</p> : null}
+      {notice ? <p className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{notice}</p> : null}
       <div className="overflow-hidden rounded-md border border-line">
         <div className="grid grid-cols-[1fr_140px_140px_1.2fr] gap-3 bg-panel px-3 py-2 text-sm font-semibold text-ink">
           <span>Build</span>
@@ -94,7 +105,7 @@ export function BuildsClient({ appId }: { appId: string }) {
         ))}
         {builds.length === 0 ? (
           <div className="bg-panel px-4 py-8 text-sm text-muted">
-            No gates have run yet. Create a snapshot, then run the quality gate.
+            No pipeline runs have executed yet. Create a snapshot, then run CI/CD.
           </div>
         ) : null}
       </div>

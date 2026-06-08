@@ -36,7 +36,7 @@ export function CommandInput({
       <div className="flex flex-wrap items-center justify-between gap-3 px-2 pb-1 pt-2">
         <div className="flex items-center gap-2 text-xs text-slate-500">
           <span className="rounded-full border border-white/10 px-2 py-1">context aware</span>
-          <span className="rounded-full border border-white/10 px-2 py-1">quality gated</span>
+          <span className="rounded-full border border-white/10 px-2 py-1">CI/CD checked</span>
         </div>
         <button
           disabled={loading || !value.trim()}

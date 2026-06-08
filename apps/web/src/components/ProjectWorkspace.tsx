@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AgentStep, apiRequest, API_URL, AppVersion, Build, sendAgentMessage } from "@/lib/api";
+import { AgentStep, API_URL, CiCdRunResponse, runCiCdPipeline, sendAgentMessage } from "@/lib/api";
 import { useAgentMessages, useAgentSteps, useApp, usePreview } from "@/lib/hooks";
 import { AgentChat } from "./AgentChat";
 import { PreviewPanel } from "./PreviewPanel";
@@ -43,8 +43,8 @@ function buildLiveSteps(appId: string, phase: "thinking" | "working" | "done" | 
     {
       id: "quality",
       appId,
-      title: "Quality gate handoff",
-      description: "Lint, typecheck, tests and build are queued for the runner when a snapshot exists.",
+      title: "CI/CD handoff",
+      description: "Lint, typecheck, tests and build run in runner-service after a snapshot exists.",
       status: statusFor(4),
       order: 4
     },
@@ -59,12 +59,38 @@ function buildLiveSteps(appId: string, phase: "thinking" | "working" | "done" | 
   ];
 }
 
+function formatCiCdSummary(response: CiCdRunResponse) {
+  const lines = [
+    `CI/CD ${response.status}.`,
+    `Initial runner build ${response.ci.build.id} finished with ${response.ci.quality.status} (${response.ci.quality.qualityScore}/100).`
+  ];
+
+  if (response.autoFix.attempted) {
+    if (response.autoFix.error) {
+      lines.push(`AI auto-fix was attempted but failed: ${response.autoFix.error}`);
+    } else {
+      const fixStatus = response.autoFix.quality?.quality.status ?? "finished";
+      const fixScore = response.autoFix.quality?.quality.qualityScore ?? "n/a";
+      lines.push(`AI auto-fix created ${response.autoFix.version ? `v${response.autoFix.version.versionNumber}` : "a repair version"} and its CI checks finished with ${fixStatus} (${fixScore}/100).`);
+    }
+  } else {
+    lines.push(response.autoFix.reason ?? "AI auto-fix was not needed.");
+  }
+
+  if (response.ci.logsExcerpt) {
+    lines.push("", "Runner logs excerpt:", response.ci.logsExcerpt.slice(0, 1200));
+  }
+
+  return lines.join("\n");
+}
+
 export function ProjectWorkspace({ appId }: { appId: string }) {
   const { app, refresh: refreshApp } = useApp(appId);
   const { messages, setMessages, loading: messagesLoading, refresh: refreshMessages } = useAgentMessages(appId);
   const { steps, setSteps, refresh: refreshSteps } = useAgentSteps(appId);
   const { preview, setPreview, refresh: refreshPreview } = usePreview(appId);
   const [sending, setSending] = useState(false);
+  const [ciCdRunning, setCiCdRunning] = useState(false);
   const initialPromptSent = useRef(false);
 
   const send = useCallback(async (content: string) => {
@@ -143,20 +169,62 @@ export function ProjectWorkspace({ appId }: { appId: string }) {
     void send(initialPrompt).catch(() => undefined);
   }, [appId, messagesLoading, send, setSteps]);
 
-  async function runQualityGate() {
-    const versions = await apiRequest<AppVersion[]>(`/apps/${appId}/versions`);
-    const latest = versions[0];
-    if (!latest) return;
-    setPreview({ appId, status: "loading" });
-    await apiRequest<{ build?: Build; quality?: { status: string; qualityScore: number } }>(`/apps/${appId}/versions/${latest.id}/quality-gate`, {
-      method: "POST"
-    });
-    await Promise.all([refreshSteps(), refreshApp(), refreshPreview()]);
+  async function runCiCd() {
+    setCiCdRunning(true);
+    setPreview((current) => ({ ...current, appId, status: current.url ? "ready" : "loading" }));
+    setMessages((current) => [
+      ...current,
+      {
+        id: `local-cicd-start-${Date.now()}`,
+        appId,
+        role: "system",
+        type: "status",
+        content: "CI/CD run requested. The API is calling runner-service now; if the run fails, the agent will attempt one repair version.",
+        createdAt: new Date().toISOString()
+      }
+    ]);
+
+    try {
+      const response = await runCiCdPipeline(appId, { autoFix: true });
+      setMessages((current) => [
+        ...current,
+        {
+          id: `local-cicd-result-${Date.now()}`,
+          appId,
+          role: "system",
+          type: "report",
+          content: formatCiCdSummary(response),
+          createdAt: new Date().toISOString()
+        }
+      ]);
+      await Promise.all([refreshMessages(), refreshSteps(), refreshApp(), refreshPreview()]);
+      setPreview({
+        appId,
+        status: response.autoFix.previewUrl || response.previewUrl ? "ready" : "empty",
+        url: response.autoFix.previewUrl || response.previewUrl ? `${API_URL}${response.autoFix.previewUrl ?? response.previewUrl}` : undefined
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "CI/CD run failed";
+      setPreview({ appId, status: "failed", error: errorMessage });
+      setMessages((current) => [
+        ...current,
+        {
+          id: `local-cicd-error-${Date.now()}`,
+          appId,
+          role: "system",
+          type: "status",
+          content: `CI/CD request failed before completion: ${errorMessage}`,
+          createdAt: new Date().toISOString()
+        }
+      ]);
+    } finally {
+      setCiCdRunning(false);
+    }
   }
 
   return (
     <div>
-      <ProjectHeader app={app} onRunQuality={runQualityGate} />
+      <ProjectHeader app={app} onRunCiCd={runCiCd} ciCdRunning={ciCdRunning} />
       <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)] 2xl:grid-cols-[460px_minmax(0,1fr)]">
         <AgentChat messages={messages} steps={steps} loading={messagesLoading} sending={sending} onSend={send} />
         <PreviewPanel preview={preview} onRefresh={refreshPreview} />

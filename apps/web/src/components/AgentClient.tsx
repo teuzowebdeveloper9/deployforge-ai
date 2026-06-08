@@ -14,7 +14,7 @@ interface AgentMessageResponse {
 }
 
 const promptExamples = [
-  "Plan a NestJS billing API with versioned quality gates.",
+  "Plan a NestJS billing API with versioned CI/CD checks.",
   "Review this microservice boundary and point out risks.",
   "Suggest a local-first deployment plan with MinIO and Redis."
 ];

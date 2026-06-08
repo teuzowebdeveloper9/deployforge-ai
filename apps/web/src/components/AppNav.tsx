@@ -4,7 +4,7 @@ export function AppNav({ appId }: { appId: string }) {
   const items = [
     { href: `/apps/${appId}`, label: "Overview" },
     { href: `/apps/${appId}/versions`, label: "Versions" },
-    { href: `/apps/${appId}/builds`, label: "Builds" },
+    { href: `/apps/${appId}/builds`, label: "CI/CD" },
     { href: `/apps/${appId}/agent`, label: "Agent" }
   ];
 

@@ -32,7 +32,7 @@ export function AppsClient() {
             <p className="text-sm font-semibold text-accent">{apps.length} active workspace{apps.length === 1 ? "" : "s"}</p>
             <h1 className="mt-1 text-3xl font-semibold text-ink">Build, version and inspect apps</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-              Start with an application, then create snapshots, run quality gates and ask the architecture agent.
+              Start with an application, then create snapshots, run CI/CD and ask the architecture agent.
             </p>
           </div>
           <Link href="/apps/new" className="w-fit rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accentDark">
