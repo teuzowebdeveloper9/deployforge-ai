@@ -117,7 +117,7 @@ The same provider router is used for:
 - `POST /agent/analyze`
 - `POST /agent/generate-app`
 
-For `generate-app`, the provider response is parsed into a bounded generated app payload. The Core API validates the payload, creates a source snapshot, stores preview HTML, creates an app version and runs a quality gate.
+For `generate-app`, the provider response is parsed into a bounded generated app payload. The Core API validates the payload, creates a source snapshot, stores preview HTML, creates an app version and runs CI checks through runner-service.
 
 ## Failure Behavior
 

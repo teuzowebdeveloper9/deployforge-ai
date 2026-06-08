@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { apiRequest, AppVersion, Build, DeployForgeApp, EnvVariable } from "@/lib/api";
+import { PlayCircle } from "lucide-react";
+import { apiRequest, AppVersion, Build, DeployForgeApp, EnvVariable, runCiCdPipeline } from "@/lib/api";
 import { StatusBadge } from "./StatusBadge";
 
 export function AppOverviewClient({ appId }: { appId: string }) {
@@ -17,7 +18,7 @@ export function AppOverviewClient({ appId }: { appId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [creatingSnapshot, setCreatingSnapshot] = useState(false);
-  const [runningGate, setRunningGate] = useState(false);
+  const [runningCiCd, setRunningCiCd] = useState(false);
 
   const load = useCallback(async () => {
     const [appData, envData, versionData, buildData] = await Promise.all([
@@ -68,8 +69,8 @@ export function AppOverviewClient({ appId }: { appId: string }) {
     }
   }
 
-  async function runQualityGate() {
-    setRunningGate(true);
+  async function runCiCd() {
+    setRunningCiCd(true);
     setError(null);
     setNotice(null);
     try {
@@ -79,17 +80,18 @@ export function AppOverviewClient({ appId }: { appId: string }) {
       }
       if (!version) return;
 
-      const result = await apiRequest<{ quality?: { status: string; qualityScore: number }; build?: Build }>(
-        `/apps/${appId}/versions/${version.id}/quality-gate`,
-        { method: "POST" }
-      );
-      const score = result.quality?.qualityScore ?? "n/a";
-      setNotice(`Quality gate ${result.quality?.status ?? "finished"} with score ${score}.`);
+      const result = await runCiCdPipeline(appId, { versionId: version.id, autoFix: true });
+      const fix = result.autoFix.error
+        ? ` AI auto-fix failed: ${result.autoFix.error}`
+        : result.autoFix.attempted
+          ? " AI created a repair version after the first failure."
+          : "";
+      setNotice(`CI/CD ${result.status}. Initial score: ${result.ci.quality.qualityScore}/100.${fix}`);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to run quality gate");
+      setError(err instanceof Error ? err.message : "Failed to run CI/CD");
     } finally {
-      setRunningGate(false);
+      setRunningCiCd(false);
     }
   }
 
@@ -128,7 +130,7 @@ export function AppOverviewClient({ appId }: { appId: string }) {
             </div>
             <h1 className="text-3xl font-semibold tracking-normal text-ink">{app.name}</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
-              {app.description ?? "No description yet. You can still create snapshots, run quality gates and ask the agent."}
+              {app.description ?? "No description yet. You can still create snapshots, run CI/CD and ask the agent."}
             </p>
           </div>
 
@@ -136,18 +138,19 @@ export function AppOverviewClient({ appId }: { appId: string }) {
             <button
               type="button"
               onClick={createSnapshot}
-              disabled={creatingSnapshot || runningGate}
+              disabled={creatingSnapshot || runningCiCd}
               className="rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink shadow-sm hover:bg-panel disabled:opacity-60"
             >
               {creatingSnapshot ? "Creating..." : "Create snapshot"}
             </button>
             <button
               type="button"
-              onClick={runQualityGate}
-              disabled={creatingSnapshot || runningGate}
-              className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-accentDark disabled:opacity-60"
+              onClick={runCiCd}
+              disabled={creatingSnapshot || runningCiCd}
+              className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-accentDark disabled:opacity-60"
             >
-              {runningGate ? "Running..." : "Run quality gate"}
+              <PlayCircle className="h-4 w-4" />
+              {runningCiCd ? "Running CI/CD..." : "Run CI/CD"}
             </button>
             <Link
               href={`/apps/${appId}/agent`}
@@ -163,7 +166,7 @@ export function AppOverviewClient({ appId }: { appId: string }) {
 
         <div className="mt-6 grid gap-3 md:grid-cols-4">
           <Metric label="Versions" value={String(versions.length)} detail={latestVersion ? `latest v${latestVersion.versionNumber}` : "none yet"} />
-          <Metric label="Quality" value={latestBuild?.status ?? "Not run"} detail={latestBuild?.finishedAt ? new Date(latestBuild.finishedAt).toLocaleString() : "runner ready"} />
+          <Metric label="CI/CD" value={latestBuild?.status ?? "Not run"} detail={latestBuild?.finishedAt ? new Date(latestBuild.finishedAt).toLocaleString() : "runner ready"} />
           <Metric label="Env metadata" value={String(envs.length)} detail={envs.length ? "configured references" : "optional"} />
           <Metric label="Storage" value="Local" detail="snapshot archive path" />
         </div>
@@ -184,14 +187,14 @@ export function AppOverviewClient({ appId }: { appId: string }) {
               description="Stores a local archive, manifest and checksum for this app."
               action="Create"
               onClick={createSnapshot}
-              disabled={creatingSnapshot || runningGate}
+              disabled={creatingSnapshot || runningCiCd}
             />
             <ActionRow
-              title="Run the quality gate"
-              description="Uses the latest snapshot, or creates one automatically if none exists."
+              title="Run CI/CD with AI repair"
+              description="Uses the latest snapshot, runs runner-service, then asks the agent to repair failed checks."
               action="Run"
-              onClick={runQualityGate}
-              disabled={creatingSnapshot || runningGate}
+              onClick={runCiCd}
+              disabled={creatingSnapshot || runningCiCd}
             />
             <Link
               href={`/apps/${appId}/agent`}

@@ -85,7 +85,7 @@ export function BuilderClient() {
 
           {loading ? (
             <div className="space-y-3">
-              {["Planning with agent-service", "Generating files", "Creating snapshot", "Running quality gate", "Preparing preview"].map(
+              {["Planning with agent-service", "Generating files", "Creating snapshot", "Running CI/CD", "Preparing preview"].map(
                 (item) => (
                   <div key={item} className="rounded-md border border-line bg-panel px-3 py-3 text-sm text-muted">
                     {item}...
@@ -178,7 +178,7 @@ export function BuilderClient() {
             <div className="max-w-md text-center">
               <p className="text-lg font-semibold text-ink">No preview yet</p>
               <p className="mt-2 text-sm leading-6 text-muted">
-                The generated app will render here after the snapshot and quality gate finish.
+                The generated app will render here after the snapshot and CI/CD finish.
               </p>
             </div>
           )}

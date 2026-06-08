@@ -77,8 +77,8 @@ export class PrismaAgentConversationRepository {
       {
         id: "quality",
         appId,
-        title: "Running quality gate",
-        description: latestBuild ? `Latest build status: ${latestBuild.status}.` : "Lint, typecheck, tests and build will run after a snapshot.",
+        title: "Running CI checks",
+        description: latestBuild ? `Latest build status: ${latestBuild.status}.` : "Lint, typecheck, tests and build run after a snapshot.",
         status: qualityStatus,
         order: 4
       },

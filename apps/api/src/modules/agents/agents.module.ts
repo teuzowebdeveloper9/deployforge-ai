@@ -23,6 +23,6 @@ import { AgentsController } from "./presentation/controllers/agents.controller";
     PrismaAgentConversationRepository,
     GeneratedAppFilesService
   ],
-  exports: [AgentServiceClient, PrismaAgentConversationRepository]
+  exports: [AgentServiceClient, PrismaAgentConversationRepository, SendAgentMessageUseCase]
 })
 export class AgentsModule {}

@@ -1,17 +1,26 @@
 import Link from "next/link";
+import { GitBranch, PlayCircle, Settings } from "lucide-react";
 import { AppProject } from "@/lib/api";
 
 const statusLabels: Record<AppProject["status"], string> = {
   draft: "Draft",
   planning: "Planning",
   generating: "Generating",
-  quality_gate: "Running quality gate",
+  quality_gate: "Running CI/CD",
   building_preview: "Building preview",
   ready: "Ready",
   failed: "Failed"
 };
 
-export function ProjectHeader({ app, onRunQuality }: { app: AppProject | null; onRunQuality?: () => void }) {
+export function ProjectHeader({
+  app,
+  onRunCiCd,
+  ciCdRunning
+}: {
+  app: AppProject | null;
+  onRunCiCd?: () => void;
+  ciCdRunning?: boolean;
+}) {
   return (
     <header className="mb-4 rounded-[28px] border border-white/10 bg-white/[0.055] px-5 py-4 shadow-2xl shadow-black/20 backdrop-blur-xl">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -26,13 +35,20 @@ export function ProjectHeader({ app, onRunQuality }: { app: AppProject | null; o
           {app?.description ? <p className="mt-1 max-w-3xl truncate text-sm text-slate-400">{app.description}</p> : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button onClick={onRunQuality} className="rounded-2xl border border-white/10 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-white/[0.06]">
-            Run Quality Gate
+          <button
+            onClick={onRunCiCd}
+            disabled={!onRunCiCd || ciCdRunning}
+            className="inline-flex items-center gap-2 rounded-2xl border border-cyan-200/20 bg-cyan-200/10 px-3 py-2 text-sm font-semibold text-cyan-50 hover:bg-cyan-200/15 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <PlayCircle className="h-4 w-4" />
+            {ciCdRunning ? "Running CI/CD" : "Run CI/CD"}
           </button>
-          <Link href={`/apps/${app?.id}/versions`} className="rounded-2xl border border-white/10 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-white/[0.06]">
+          <Link href={`/apps/${app?.id}/versions`} className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-white/[0.06]">
+            <GitBranch className="h-4 w-4" />
             New Version
           </Link>
-          <Link href={`/apps/${app?.id}`} className="rounded-2xl border border-white/10 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-white/[0.06]">
+          <Link href={`/apps/${app?.id}`} className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-3 py-2 text-sm font-medium text-slate-300 hover:bg-white/[0.06]">
+            <Settings className="h-4 w-4" />
             Settings
           </Link>
         </div>

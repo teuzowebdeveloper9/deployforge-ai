@@ -92,7 +92,7 @@ export class SendAgentMessageUseCase {
       generated.notes || "Generated a runnable app update from your prompt.",
       "",
       `Generated ${generated.files.length} files and created snapshot v${version.versionNumber}.`,
-      `Quality gate finished with ${quality.quality.status} (${quality.quality.qualityScore}/100).`,
+      `CI checks finished with ${quality.quality.status} (${quality.quality.qualityScore}/100).`,
       `Preview updated at /apps/${app.id}/preview.`,
       "",
       "Generated files:",

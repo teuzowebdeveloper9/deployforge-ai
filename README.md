@@ -13,7 +13,7 @@ This phase does not implement a skills system. Skills are a future evolution and
 - NestJS Auth Service for registration, login, access tokens, refresh token rotation, logout and gateway verification.
 - NestJS Core API with Prisma/PostgreSQL, modular domains and orchestration endpoints.
 - FastAPI agent-service with prioritized AI provider routing for planning, analysis and generated app file sets.
-- Go runner-service for quality gates and report generation.
+- Go runner-service for CI/quality checks and report generation.
 - PostgreSQL, Redis/BullMQ, MinIO-ready storage, local Docker Registry, Prometheus, Loki and Grafana through Docker Compose.
 - GitHub Actions CI with frontend, API, agent-service, runner-service, Docker and safety checks.
 - Documentation for architecture, services, envs, quality, agents and local/open-source infrastructure.
@@ -63,7 +63,7 @@ web
         -> runner-service for quality gates
 ```
 
-The API is the source of truth for metadata. It does not execute user code directly. It coordinates app creation, version snapshots, agent messages, quality gates and preview artifacts.
+The API is the source of truth for metadata. It does not execute user code directly. It coordinates app creation, version snapshots, agent messages, CI/CD runs and preview artifacts.
 
 The runner-service is isolated from the API and is responsible for executing quality commands with timeouts and log capture.
 
@@ -152,7 +152,7 @@ List apps:
 curl http://localhost:8080/api/apps -H "Authorization: Bearer <accessToken>"
 ```
 
-Generate a full app with AI-backed files, snapshot, quality gate and preview:
+Generate a full app with AI-backed files, snapshot, CI checks and preview:
 
 ```bash
 curl -X POST http://localhost:8080/api/apps/generate \
@@ -167,7 +167,7 @@ Continue an existing project chat:
 curl -X POST http://localhost:8080/api/apps/<appId>/messages \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <accessToken>" \
-  -d '{"message":"Improve this app with a billing dashboard and explain the quality gates."}'
+  -d '{"message":"Improve this app with a billing dashboard and explain the CI/CD checks."}'
 ```
 
 Read messages and agent steps:
@@ -183,11 +183,20 @@ Open preview HTML:
 curl http://localhost:8080/api/apps/<appId>/preview -H "Authorization: Bearer <accessToken>"
 ```
 
-Run quality gate for a version:
+Run the lower-level quality gate for a version:
 
 ```bash
 curl -X POST http://localhost:8080/api/apps/<appId>/versions/<versionId>/quality-gate \
   -H "Authorization: Bearer <accessToken>"
+```
+
+Run app CI/CD with one AI repair attempt if the first run fails:
+
+```bash
+curl -X POST http://localhost:8080/api/apps/<appId>/ci-cd \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <accessToken>" \
+  -d '{"versionId":"<versionId>","autoFix":true}'
 ```
 
 ## Development Commands

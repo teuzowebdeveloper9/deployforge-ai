@@ -140,6 +140,50 @@ export interface AgentMessageResponse {
   previewUrl?: string;
 }
 
+export interface CiCdStage {
+  id: string;
+  label: string;
+  status: "pending" | "running" | "passed" | "failed" | "skipped";
+  detail?: string;
+}
+
+export interface CiCdRunResponse {
+  status: "PASSED" | "FAILED" | "PASSED_AFTER_FIX" | "FAILED_AFTER_FIX";
+  version: AppVersion;
+  ci: {
+    build: Build;
+    quality: {
+      status: string;
+      qualityScore: number;
+    };
+    logsExcerpt: string;
+  };
+  previewUrl?: string;
+  autoFix: {
+    attempted: boolean;
+    reason?: string;
+    error?: string;
+    runId?: string;
+    version?: AppVersion;
+    quality?: {
+      build: Build;
+      quality: {
+        status: string;
+        qualityScore: number;
+      };
+    };
+    files?: GeneratedFileSummary[];
+    previewUrl?: string;
+    message?: {
+      mode: string;
+      response: string;
+      provider: string;
+      model: string;
+    };
+  };
+  stages: CiCdStage[];
+}
+
 export async function authHeaders(): Promise<Record<string, string>> {
   const session = await ensureAuthSession();
   return session ? { Authorization: `Bearer ${session.accessToken}` } : {};
@@ -229,5 +273,15 @@ export async function sendAgentMessage(appId: string, content: string) {
   return apiRequest<AgentMessageResponse>(`/apps/${appId}/messages`, {
     method: "POST",
     body: JSON.stringify({ message: content })
+  });
+}
+
+export async function runCiCdPipeline(appId: string, input?: { versionId?: string; autoFix?: boolean }) {
+  return apiRequest<CiCdRunResponse>(`/apps/${appId}/ci-cd`, {
+    method: "POST",
+    body: JSON.stringify({
+      versionId: input?.versionId,
+      autoFix: input?.autoFix ?? true
+    })
   });
 }

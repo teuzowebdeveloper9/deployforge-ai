@@ -9,7 +9,7 @@ DeployForge AI uses a pragmatic microservices monorepo. Each deployable service 
 - `auth-service`: NestJS authentication boundary with access tokens, refresh rotation and organization context.
 - `api`: generation/orchestration boundary and source of truth for metadata.
 - `agent-service`: prioritized AI provider router for planning, analysis and bounded app generation.
-- `runner-service`: isolated quality gate executor.
+- `runner-service`: isolated quality/CI executor.
 
 ## Core Flow
 
@@ -19,9 +19,10 @@ DeployForge AI uses a pragmatic microservices monorepo. Each deployable service 
 4. `gateway` verifies the access token through `auth-service` and forwards trusted user/org context.
 5. `api` asks `agent-service` to generate a bounded file set through the best configured AI provider and creates app metadata in PostgreSQL.
 6. `api` validates generated paths/content, saves a source snapshot through `StoragePort` and emits domain events through `QueuePort`.
-7. `api` asks `runner-service` to run the quality gate for the snapshot and stores logs/reports in storage.
-8. `web` shows the generation timeline, generated file list, quality status and preview HTML.
-9. Existing workspace screens can still create additional snapshots, run builds and send follow-up agent prompts.
+7. `api` asks `runner-service` to run CI checks for the snapshot and stores logs/reports in storage.
+8. `web` shows the generation timeline, generated file list, CI/CD status and preview HTML.
+9. A user can run `POST /apps/:appId/ci-cd`; failed runs can trigger one AI repair version through the same snapshot and runner flow.
+10. Existing workspace screens can still create additional snapshots, run builds and send follow-up agent prompts.
 
 ## Boundaries
 

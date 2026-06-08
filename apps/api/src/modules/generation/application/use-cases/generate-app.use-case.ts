@@ -71,7 +71,7 @@ export class GenerateAppUseCase {
       generated.notes || "Application files were generated from the prompt.",
       "",
       `Generated ${generated.files.length} files and created snapshot v${version.versionNumber}.`,
-      `Quality gate finished with ${quality.quality.status} (${quality.quality.qualityScore}/100).`,
+      `CI checks finished with ${quality.quality.status} (${quality.quality.qualityScore}/100).`,
       "The preview is ready on the right panel."
     ].join("\n");
     await this.conversations.saveMessage(app.id, "assistant", agentSummary);
@@ -95,7 +95,7 @@ export class GenerateAppUseCase {
         { label: "Application code generated", status: "completed", provider: generated.provider },
         { label: "Files generated", status: "completed", count: generated.files.length },
         { label: `Snapshot v${version.versionNumber} created`, status: "completed" },
-        { label: `Quality gate ${quality.quality.status}`, status: "completed", score: quality.quality.qualityScore },
+        { label: `CI checks ${quality.quality.status}`, status: "completed", score: quality.quality.qualityScore },
         { label: "Preview ready", status: "completed" }
       ]
     };
